@@ -23,7 +23,13 @@
 **A1 — Healthcheck**
 ```
 GET /health → 200
-{ "service": "interview-mock", "status": "ok" }
+{
+  "status": "ok",
+  "service": "interview-mock",
+  "timestamp": "2026-...",
+  "protocols": ["REST", "SOAP"],
+  "counts": { "interviews": 2, "candidates": 2 }
+}
 ```
 
 **A2 — Seznam pohovorů**
@@ -83,6 +89,7 @@ status = "COMPLETED", recommendation = "REVIEW" (68 je v rozmezí 55-74)
 | Neplatný status | `PATCH /rest/interviews/INT-001/status { "status": "INVALID" }` | 400, `INVALID_STATUS` |
 | Neexistující route | `GET /rest/neexistuje` | 404, `ROUTE_NOT_FOUND` |
 | Neexistující kandidát | `GET /rest/candidates/CAND-999` | 404, `CANDIDATE_NOT_FOUND` |
+| Interní chyba serveru | (nelze snadno vyvolat) | 500, `INTERNAL_ERROR` |
 
 ### Úloha B: SOAP API
 
