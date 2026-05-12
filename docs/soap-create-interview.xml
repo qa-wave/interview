@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
+  <soap:Body>
+    <tns:CreateInterviewRequest>
+      <tns:candidateId>CAND-001</tns:candidateId>
+      <tns:position>QA Automation Engineer</tns:position>
+      <tns:scheduledAt>2026-05-21T10:00:00.000Z</tns:scheduledAt>
+    </tns:CreateInterviewRequest>
+  </soap:Body>
+</soap:Envelope>

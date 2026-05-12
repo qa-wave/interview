@@ -1,0 +1,66 @@
+### Healthcheck
+GET http://localhost:4010/health
+
+### REST: service catalog
+GET http://localhost:4010/
+
+### REST: list interviews
+GET http://localhost:4010/rest/interviews
+
+### REST: get interview
+GET http://localhost:4010/rest/interviews/INT-001
+
+### REST: create interview
+POST http://localhost:4010/rest/interviews
+Content-Type: application/json
+
+{
+  "candidateId": "CAND-001",
+  "position": "QA Automation Engineer",
+  "scheduledAt": "2026-05-21T10:00:00.000Z"
+}
+
+### REST: update status
+PATCH http://localhost:4010/rest/interviews/INT-001/status
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### REST: evaluate interview
+POST http://localhost:4010/rest/interviews/INT-001/evaluate
+Content-Type: application/json
+
+{
+  "score": 88
+}
+
+### SOAP: WSDL
+GET http://localhost:4010/soap?wsdl
+
+### SOAP: list interviews
+POST http://localhost:4010/soap
+Content-Type: text/xml; charset=utf-8
+SOAPAction: urn:interview-mock#ListInterviews
+
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
+  <soap:Body>
+    <tns:ListInterviewsRequest/>
+  </soap:Body>
+</soap:Envelope>
+
+### SOAP: get interview
+POST http://localhost:4010/soap
+Content-Type: text/xml; charset=utf-8
+SOAPAction: urn:interview-mock#GetInterview
+
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
+  <soap:Body>
+    <tns:GetInterviewRequest>
+      <tns:id>INT-001</tns:id>
+    </tns:GetInterviewRequest>
+  </soap:Body>
+</soap:Envelope>

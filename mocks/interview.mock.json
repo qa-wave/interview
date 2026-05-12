@@ -1,0 +1,42 @@
+{
+  "candidates": [
+    {
+      "id": "CAND-001",
+      "firstName": "Anna",
+      "lastName": "Novak",
+      "email": "anna.novak@example.test",
+      "phone": "+420777111222",
+      "seniority": "mid",
+      "skills": ["JavaScript", "REST", "SQL"]
+    },
+    {
+      "id": "CAND-002",
+      "firstName": "Petr",
+      "lastName": "Svoboda",
+      "email": "petr.svoboda@example.test",
+      "phone": "+420777333444",
+      "seniority": "senior",
+      "skills": ["Java", "SOAP", "Microservices"]
+    }
+  ],
+  "interviews": [
+    {
+      "id": "INT-001",
+      "candidateId": "CAND-001",
+      "position": "QA Automation Engineer",
+      "scheduledAt": "2026-05-18T09:00:00.000Z",
+      "status": "SCHEDULED",
+      "score": null,
+      "recommendation": null
+    },
+    {
+      "id": "INT-002",
+      "candidateId": "CAND-002",
+      "position": "Backend Developer",
+      "scheduledAt": "2026-05-19T13:30:00.000Z",
+      "status": "COMPLETED",
+      "score": 82,
+      "recommendation": "HIRE"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Interview Mock REST API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4010
+paths:
+  /health:
+    get:
+      summary: Service healthcheck
+      responses:
+        "200":
+          description: Mock service is running
+  /rest/interviews:
+    get:
+      summary: List interviews
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, FAILED]
+        - in: query
+          name: candidateId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of interviews
+    post:
+      summary: Create interview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [candidateId]
+              properties:
+                candidateId:
+                  type: string
+                  example: CAND-001
+                position:
+                  type: string
+                  example: QA Automation Engineer
+                scheduledAt:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Interview was created
+        "400":
+          description: Unknown candidate
+  /rest/interviews/{id}:
+    get:
+      summary: Get interview detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Interview detail
+        "404":
+          description: Interview was not found
+  /rest/interviews/{id}/status:
+    patch:
+      summary: Update interview status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, FAILED]
+      responses:
+        "200":
+          description: Status was updated
+  /rest/interviews/{id}/evaluate:
+    post:
+      summary: Complete interview with a mock score
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [score]
+              properties:
+                score:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+      responses:
+        "200":
+          description: Interview was evaluated
+  /rest/candidates/{id}:
+    get:
+      summary: Get candidate detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Candidate detail

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
+  <soap:Body>
+    <tns:UpdateInterviewStatusRequest>
+      <tns:id>INT-001</tns:id>
+      <tns:status>IN_PROGRESS</tns:status>
+    </tns:UpdateInterviewStatusRequest>
+  </soap:Body>
+</soap:Envelope>

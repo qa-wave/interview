@@ -1,0 +1,47 @@
+{
+  "name": "interview-mock",
+  "version": "1.0.0",
+  "description": "REST and SOAP mock services for interview testing.",
+  "main": "server.js",
+  "bin": {
+    "interview-mock": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node --test test/*.test.js",
+    "package": "node scripts/build-packages.js",
+    "deploy": "vercel --prod --yes"
+  },
+  "keywords": [
+    "mock",
+    "rest",
+    "soap",
+    "interview"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.7.3"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "6.19.0"
+  },
+  "pkg": {
+    "assets": [
+      "mocks/**/*.json",
+      "openapi.yaml",
+      "README.md"
+    ],
+    "targets": [
+      "node20-macos-arm64",
+      "node20-macos-x64",
+      "node20-win-x64"
+    ],
+    "outputPath": "dist/bin"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

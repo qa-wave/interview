@@ -1,0 +1,80 @@
+{
+  "info": {
+    "name": "Interview Mock REST and SOAP",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4010"
+    }
+  ],
+  "item": [
+    {
+      "name": "Healthcheck",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "REST - List Interviews",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/rest/interviews"
+      }
+    },
+    {
+      "name": "REST - Get Interview",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/rest/interviews/INT-001"
+      }
+    },
+    {
+      "name": "REST - Create Interview",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"candidateId\": \"CAND-001\",\n  \"position\": \"QA Automation Engineer\",\n  \"scheduledAt\": \"2026-05-21T10:00:00.000Z\"\n}"
+        },
+        "url": "{{baseUrl}}/rest/interviews"
+      }
+    },
+    {
+      "name": "SOAP - WSDL",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/soap?wsdl"
+      }
+    },
+    {
+      "name": "SOAP - Get Interview",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "text/xml; charset=utf-8"
+          },
+          {
+            "key": "SOAPAction",
+            "value": "urn:interview-mock#GetInterview"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-001</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+        },
+        "url": "{{baseUrl}}/soap"
+      }
+    }
+  ]
+}
