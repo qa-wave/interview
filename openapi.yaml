@@ -4,10 +4,20 @@ info:
   version: 1.0.0
 servers:
   - url: http://localhost:4010
+security:
+  - apiKey: []
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: "Admin key: interview-key-2026, Read-only key: readonly-key-2026"
 paths:
   /health:
     get:
       summary: Service healthcheck
+      security: []
       responses:
         "200":
           description: Mock service is running
@@ -112,6 +122,21 @@ paths:
       responses:
         "200":
           description: Interview was evaluated
+  /rest/candidates:
+    get:
+      summary: Search candidates
+      parameters:
+        - in: query
+          name: email
+          schema:
+            type: string
+        - in: query
+          name: skill
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of matching candidates
   /rest/candidates/{id}:
     get:
       summary: Get candidate detail

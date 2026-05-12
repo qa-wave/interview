@@ -9,8 +9,12 @@
 1. Spusťte službu: `npm start` (výchozí port 4010)
 2. Ověřte dostupnost: `curl http://localhost:4010/health`
 3. Připravte uchazeči notebook s nainstalovaným **Postmanem** a/nebo **SoapUI**
-4. Předejte uchazeči soubor `interview-zadani.md`
+4. Předejte uchazeči soubor `interview-zadani.md` (nebo PDF verzi)
 5. Volitelně importujte Postman kolekci z `postman/interview-mock.postman_collection.json`
+
+**API klíče pro uchazeče:**
+- Admin: `interview-key-2026`
+- Read-only: `readonly-key-2026`
 
 **Pozor:** Služba drží stav v paměti. Po restartu se data vrátí do výchozího stavu. Pokud uchazeč udělá chybu, může být potřeba restartovat službu.
 
@@ -18,9 +22,56 @@
 
 ## Praktická část: Očekávané odpovědi
 
-### Úloha A: REST API
+### Úloha A: Zabezpečení API
 
-**A1 — Healthcheck**
+**A1 — Volání bez API klíče**
+```
+GET /rest/interviews (bez X-API-Key) → 401
+{ "error": "UNAUTHORIZED", "message": "Missing X-API-Key header." }
+```
+
+**A2 — Neplatný API klíč**
+```
+GET /rest/interviews (X-API-Key: invalid) → 401
+{ "error": "UNAUTHORIZED", "message": "Invalid API key." }
+```
+
+**A3 — Platný admin klíč**
+```
+GET /rest/interviews (X-API-Key: interview-key-2026) → 200
+{ "interviews": [...] }
+```
+
+**A4 — Read-only klíč na čtení**
+```
+GET /rest/interviews (X-API-Key: readonly-key-2026) → 200
+{ "interviews": [...] }
+```
+
+**A5 — Read-only klíč na zápis**
+```
+POST /rest/interviews (X-API-Key: readonly-key-2026) → 403
+{ "error": "FORBIDDEN", "message": "Read-only API key cannot perform write operations." }
+```
+
+**A6 — Veřejné endpointy**
+```
+GET /health (bez klíče) → 200
+GET /soap?wsdl (bez klíče) → 200
+```
+
+**A7 — SOAP bez autentizace**
+```
+POST /soap (bez X-API-Key) → 401
+{ "error": "UNAUTHORIZED", "message": "Missing X-API-Key header." }
+```
+Poznámka: Odpověď je JSON, ne XML — autentizace běží na úrovni middleware před SOAP parserem.
+
+### Úloha B: REST API
+
+> **Všechny requesty s hlavičkou `X-API-Key: interview-key-2026`**
+
+**B1 — Healthcheck**
 ```
 GET /health → 200
 {
@@ -32,27 +83,27 @@ GET /health → 200
 }
 ```
 
-**A2 — Seznam pohovorů**
+**B2 — Seznam pohovorů**
 ```
 GET /rest/interviews → 200
 Odpověď: { "interviews": [...] } — pole se 2 záznamy (INT-001, INT-002)
 Každý záznam musí obsahovat vnořený objekt "candidate" (ne jen candidateId)
 ```
 
-**A3 — Filtrování**
+**B3 — Filtrování**
 ```
 GET /rest/interviews?status=SCHEDULED → 200
 Vrátí pouze INT-001 (status SCHEDULED)
 ```
 
-**A4 — Detail**
+**B4 — Detail**
 ```
 GET /rest/interviews/INT-001 → 200
 candidate.firstName = "Anna", candidate.lastName = "Novak"
 candidate.skills = ["JavaScript", "REST", "SQL"]
 ```
 
-**A5 — Vytvoření**
+**B5 — Vytvoření**
 ```
 POST /rest/interviews
 Content-Type: application/json
@@ -61,7 +112,7 @@ Content-Type: application/json
 Nové ID bude INT-003 (auto-increment)
 ```
 
-**A6 — Změna statusu**
+**B6 — Změna statusu**
 ```
 PATCH /rest/interviews/INT-003/status
 Content-Type: application/json
@@ -69,7 +120,7 @@ Content-Type: application/json
 → 200
 ```
 
-**A7 — Hodnocení**
+**B7 — Hodnocení**
 ```
 POST /rest/interviews/INT-003/evaluate
 Content-Type: application/json
@@ -78,7 +129,7 @@ Content-Type: application/json
 status = "COMPLETED", recommendation = "REVIEW" (68 je v rozmezí 55-74)
 ```
 
-**A8 — Negativní testy (uchazeč vybírá min. 2)**
+**B8 — Negativní testy (uchazeč vybírá min. 2)**
 
 | Scénář | Request | Očekávaná odpověď |
 |---|---|---|
@@ -91,28 +142,119 @@ status = "COMPLETED", recommendation = "REVIEW" (68 je v rozmezí 55-74)
 | Neexistující kandidát | `GET /rest/candidates/CAND-999` | 404, `CANDIDATE_NOT_FOUND` |
 | Interní chyba serveru | (nelze snadno vyvolat) | 500, `INTERNAL_ERROR` |
 
-### Úloha B: SOAP API
+### Úloha C: Řetězení parametrů a práce s proměnnými
 
-**B1 — WSDL**
+Tato úloha ověřuje, zda uchazeč umí **dynamicky pracovat s daty z odpovědí** a správně používat **scoping proměnných** — klíčové dovednosti integračního testera.
+
+**C1 — Nastavení proměnných prostředí**
+
+Uchazeč by měl vytvořit environment a nastavit `baseUrl` + `apiKey`. Hodnotí se zdůvodnění:
+
+| Proměnná | Správná úroveň | Zdůvodnění |
+|---|---|---|
+| `baseUrl` | Environment | Mění se mezi prostředími (test/staging/prod) |
+| `apiKey` | Environment | Jiný klíč pro různá prostředí, nepatří do globálních (bezpečnost) |
+| `candidateId` | Collection | Dočasná hodnota získaná z odpovědi, platná jen v rámci test flow |
+| `interviewId` | Collection | Dočasná hodnota získaná z odpovědi, platná jen v rámci test flow |
+
+**Správné odpovědi na dotaz „proč ne globální?":**
+- Globální proměnné se sdílejí napříč kolekcemi — hrozí kolize názvů a nechtěné přepisování
+- API klíče v globálních proměnných jsou bezpečnostní riziko (viditelné všude)
+- Environment proměnné umožňují přepínat mezi prostředími jedním kliknutím
+
+**V SoapUI odpovídající úrovně:**
+- Global Properties = globální proměnné Postmanu
+- Project Properties = environment proměnné Postmanu
+- Test Suite / Test Case Properties = collection / lokální proměnné Postmanu
+
+**C2 — Vyhledání kandidáta**
 ```
-GET /soap?wsdl → 200, Content-Type: application/xml
+GET /rest/candidates?email=petr.svoboda@example.test → 200
+{ "candidates": [{ "id": "CAND-002", "firstName": "Petr", ... }] }
+```
+Uchazeč si musí uložit ID do **collection proměnné** (ne globální!).
+
+V Postmanu (Tests tab):
+```javascript
+const data = pm.response.json();
+pm.collectionVariables.set("candidateId", data.candidates[0].id);
+```
+
+V SoapUI: Property Transfer step nebo Groovy skript do Test Case Properties.
+
+**C3 — Vytvoření pohovoru s dynamickým ID**
+```
+POST /rest/interviews
+{ "candidateId": "{{candidateId}}", "position": "Senior Integration Tester", "scheduledAt": "2026-07-01T09:00:00.000Z" }
+→ 201
+Klíčové: uchazeč nesmí hardcodovat CAND-002, ale použít proměnnou z C2.
+Nové ID bude INT-004 (pokud INT-003 vzniklo v úloze B).
+```
+
+Uchazeč uloží `interviewId` z odpovědi do collection proměnné:
+```javascript
+const data = pm.response.json();
+pm.collectionVariables.set("interviewId", data.interview.id);
+```
+
+**C4 — Ověření vytvoření**
+```
+GET /rest/interviews/{{interviewId}} → 200
+Uchazeč musí použít proměnnou z C3.
+Ověřit: candidate.firstName = "Petr", position = "Senior Integration Tester"
+```
+
+**C5 — Lifecycle**
+```
+PATCH /rest/interviews/{{interviewId}}/status { "status": "IN_PROGRESS" } → 200
+POST /rest/interviews/{{interviewId}}/evaluate { "score": 91 } → 200
+recommendation = "HIRE" (91 >= 75)
+```
+
+**C6 — Filtrování s dynamickým parametrem**
+```
+GET /rest/interviews?candidateId={{candidateId}}&status=COMPLETED → 200
+Musí vrátit pohovor vytvořený v C3 (po hodnocení v C5).
+```
+
+**C7 — Vyhledání podle skillu**
+```
+GET /rest/candidates?skill=SQL → 200
+Vrátí 1 kandidáta: CAND-001 (Anna Novak, skills: JavaScript, REST, SQL)
+```
+
+**Na co se zaměřit:**
+
+| Co sledovat | Vynikající | Dostatečné | Nedostatečné |
+|---|---|---|---|
+| Proměnné | Automatické ukládání z odpovědí (skripty) | Ruční kopírování hodnot | Hardcoded hodnoty |
+| Scoping | Správně rozlišuje global/env/collection | Vše v jedné úrovni, ale funguje | Nepoužívá proměnné |
+| Zdůvodnění | Vysvětlí bezpečnost, přenositelnost, kolize | Částečně vysvětlí | Neumí vysvětlit |
+
+### Úloha D: SOAP API
+
+> **Všechny SOAP requesty s hlavičkou `X-API-Key: interview-key-2026`**
+
+**D1 — WSDL**
+```
+GET /soap?wsdl → 200, Content-Type: application/xml (bez autentizace)
 Uchazeč by měl identifikovat 4 operace: ListInterviews, GetInterview, CreateInterview, UpdateInterviewStatus
 ```
 
-**B2 — ListInterviews**
+**D2 — ListInterviews**
 ```xml
-POST /soap (Content-Type: text/xml)
+POST /soap (Content-Type: text/xml, X-API-Key: interview-key-2026)
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
   <soap:Body>
     <tns:ListInterviewsRequest/>
   </soap:Body>
 </soap:Envelope>
 ```
-Odpověď: XML s `ListInterviewsResponse`, obsahuje všechny pohovory.
+Odpověď: XML s `ListInterviewsResponse`, obsahuje všechny pohovory (včetně těch vytvořených v úlohách B a C).
 
-**B3 — GetInterview**
+**D3 — GetInterview**
 ```xml
-POST /soap (Content-Type: text/xml)
+POST /soap (Content-Type: text/xml, X-API-Key: interview-key-2026)
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
   <soap:Body>
     <tns:GetInterviewRequest>
@@ -123,9 +265,9 @@ POST /soap (Content-Type: text/xml)
 ```
 Odpověď: score=82, recommendation=HIRE, candidate.firstName=Petr
 
-**B4 — CreateInterview**
+**D4 — CreateInterview**
 ```xml
-POST /soap (Content-Type: text/xml)
+POST /soap (Content-Type: text/xml, X-API-Key: interview-key-2026)
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
   <soap:Body>
     <tns:CreateInterviewRequest>
@@ -136,24 +278,26 @@ POST /soap (Content-Type: text/xml)
   </soap:Body>
 </soap:Envelope>
 ```
-Odpověď: nové ID (INT-004 pokud již existuje INT-003 z REST úlohy).
+Odpověď: nové ID (INT-005 pokud INT-003 vzniklo v B a INT-004 v C).
 
-**B5 — UpdateInterviewStatus**
+**D5 — UpdateInterviewStatus**
 ```xml
-POST /soap (Content-Type: text/xml)
+POST /soap (Content-Type: text/xml, X-API-Key: interview-key-2026)
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
   <soap:Body>
     <tns:UpdateInterviewStatusRequest>
-      <tns:id>INT-004</tns:id>
+      <tns:id>INT-005</tns:id>
       <tns:status>CANCELLED</tns:status>
     </tns:UpdateInterviewStatusRequest>
   </soap:Body>
 </soap:Envelope>
 ```
 
-### Úloha C: Cross-protocol ověření
+### Úloha E: Cross-protocol ověření
 
-Uchazeč by měl zavolat `GET /rest/interviews` a najít v odpovědi oba nově vytvořené pohovory (REST i SOAP). To dokazuje, že obě API sdílejí stejný datový stav.
+Uchazeč by měl zavolat `GET /rest/interviews` a najít v odpovědi všechny nově vytvořené pohovory (z úloh B, C i D). To dokazuje, že obě API sdílejí stejný datový stav.
+
+Bonusový bod: uchazeč zmíní návrhy na vylepšení zabezpečení (rate limiting, HTTPS, JWT místo API klíčů, audit log apod.).
 
 ---
 
@@ -229,7 +373,7 @@ Uchazeč by měl zavolat `GET /rest/interviews` a najít v odpovědi oba nově v
 - REST výhody: jednoduchost, flexibilní formáty (JSON), cachování, široká podpora
 - REST nevýhody: žádný formální kontrakt (OpenAPI je volitelný), méně standardizovaná bezpečnost
 
-### Obecné otázky
+### Zabezpečení a obecné otázky
 
 **13. Integrační testování**
 - Testuje interakci mezi komponentami/systémy
@@ -237,12 +381,10 @@ Uchazeč by měl zavolat `GET /rest/interviews` a najít v odpovědi oba nově v
 - Integrační: spolupráce více komponent, reálné závislosti
 - E2E: celý systém end-to-end včetně UI
 
-**14. Testování s třetí stranou**
-- Mockování/stubování externí služby v nižších prostředích
-- Contract testing pro ověření kompatibility
-- Sandbox/testovací prostředí poskytovatele
-- Monitoring a alerting na produkci
-- Testování timeoutů, retries, fallbacků
+**14. Autentizace vs autorizace**
+- Autentizace: ověření identity (kdo jsi?) — login, API klíč, certifikát
+- Autorizace: ověření oprávnění (co smíš?) — role, permissions, policies
+- Příklad z praxe: autentizace = přihlášení API klíčem; autorizace = read-only klíč nemůže vytvářet záznamy (403)
 
 **15. Contract testing**
 - Ověřuje kompatibilitu API mezi consumer a provider
@@ -266,13 +408,39 @@ Uchazeč by měl zavolat `GET /rest/interviews` a najít v odpovědi oba nově v
 - Mock: ověřuje, že byl zavolán se správnými parametry (aktivní, assertions)
 - Vhodné: izolace od externích závislostí, nestabilní služby, vývoj paralelně
 
+**19. Způsoby zabezpečení API**
+- API klíče: jednoduché, vhodné pro server-to-server, nelze omezit scope
+- OAuth 2.0: standard pro delegovanou autorizaci, access/refresh tokeny, scopes
+- JWT: JSON Web Token, self-contained (nemusí se volat auth server), podepsané (HMAC/RSA)
+- Porovnání: API klíče = nejjednodušší ale nejméně bezpečné; OAuth = nejrobustnější ale nejsložitější; JWT = dobrý kompromis
+
+**20. CORS**
+- Cross-Origin Resource Sharing
+- Mechanismus prohlížeče pro povolení/zakázání cross-origin HTTP requestů
+- Preflight request (OPTIONS) pro kontrolu povolených origin, metod, hlaviček
+- Důležitý pro webové API volaná z frontendu na jiné doméně
+- Access-Control-Allow-Origin, Access-Control-Allow-Methods, Access-Control-Allow-Headers
+
+**21. Scoping proměnných v Postmanu / SoapUI**
+
+| Úroveň (Postman) | Úroveň (SoapUI) | Viditelnost | Příklad použití |
+|---|---|---|---|
+| **Global** | Global Properties | Všechny kolekce, všechna prostředí | Společné konstanty (timeout, verze API) — používat minimálně |
+| **Environment** | Project Properties | Všechny kolekce v daném prostředí | `baseUrl`, `apiKey` — mění se mezi test/staging/prod |
+| **Collection** | Test Suite Properties | Jen v rámci kolekce | Sdílená data mezi requesty (token získaný při loginu) |
+| **Local (data/pre-req)** | Test Case Properties | Jen jeden request / test step | Dočasné hodnoty: `candidateId` z odpovědi, `interviewId` |
+
+- Pořadí přepisování (Postman): Local > Data > Environment > Collection > Global
+- Bezpečnostní pravidlo: citlivé hodnoty (klíče, tokeny) patří do Environment, nikdy do Global
+- SoapUI navíc má Test Step Properties (nejnižší úroveň) a Property Transfer step pro automatické předávání hodnot mezi kroky
+
 ---
 
 ## Doporučený průběh pohovoru
 
-1. **Úvod (5 min)** — představení, vysvětlení formátu
-2. **Praktická část (60 min)** — uchazeč pracuje, zkoušející pozoruje a odpovídá na dotazy k zadání
-3. **Teoretická část (15 min)** — zkoušející vybere 2 REST + 2 SOAP + 2 obecné otázky
+1. **Úvod (5 min)** — představení, vysvětlení formátu, předání API klíčů
+2. **Praktická část (75 min)** — uchazeč pracuje, zkoušející pozoruje a odpovídá na dotazy k zadání
+3. **Teoretická část (15 min)** — zkoušející vybere 2 REST + 2 SOAP + 2 obecné/security otázky
 4. **Diskuze (10 min)** — uchazeč prezentuje shrnutí, zkoušející se ptá na postřehy
 5. **Závěr (5 min)** — prostor pro otázky uchazeče
 
@@ -282,4 +450,7 @@ Uchazeč by měl zavolat `GET /rest/interviews` a najít v odpovědi oba nově v
 - Organizace práce (pojmenovávání requestů, struktura kolekce)
 - Schopnost interpretovat chybové odpovědi
 - Práce s WSDL a XML (zvládá namespace, strukturu envelope)
+- **Práce s autentizací** (jak rychle pochopí rozdíl admin vs reader klíč?)
+- **Řetězení parametrů** (používá proměnné/property transfer, nebo kopíruje ručně?)
+- **Scoping proměnných** (rozlišuje global/env/collection, nebo vše hází do jedné úrovně?)
 - Komunikace — jak popisuje nalezené problémy

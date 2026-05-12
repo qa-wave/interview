@@ -7,178 +7,281 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:4010"
+    },
+    {
+      "key": "apiKey",
+      "value": "interview-key-2026"
     }
   ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}"
+      },
+      {
+        "key": "in",
+        "value": "header"
+      }
+    ]
+  },
   "item": [
     {
-      "name": "Healthcheck",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/health"
-      }
-    },
-    {
-      "name": "REST - List Interviews",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/rest/interviews"
-      }
-    },
-    {
-      "name": "REST - Get Interview",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/rest/interviews/INT-001"
-      }
-    },
-    {
-      "name": "REST - Create Interview",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+      "name": "Auth & Security",
+      "item": [
+        {
+          "name": "Healthcheck (no auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"candidateId\": \"CAND-001\",\n  \"position\": \"QA Automation Engineer\",\n  \"scheduledAt\": \"2026-05-21T10:00:00.000Z\"\n}"
         },
-        "url": "{{baseUrl}}/rest/interviews"
-      }
-    },
-    {
-      "name": "REST - Update Interview Status",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "WSDL (no auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/soap?wsdl"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
         },
-        "url": "{{baseUrl}}/rest/interviews/INT-001/status"
-      }
-    },
-    {
-      "name": "REST - Evaluate Interview",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "List Interviews - no key (expect 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/interviews"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"score\": 72\n}"
         },
-        "url": "{{baseUrl}}/rest/interviews/INT-001/evaluate"
-      }
-    },
-    {
-      "name": "REST - Get Candidate",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/rest/candidates/CAND-001"
-      }
-    },
-    {
-      "name": "SOAP - WSDL",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/soap?wsdl"
-      }
-    },
-    {
-      "name": "SOAP - Get Interview",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "text/xml; charset=utf-8"
-          },
-          {
-            "key": "SOAPAction",
-            "value": "urn:interview-mock#GetInterview"
+        {
+          "name": "List Interviews - invalid key (expect 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "invalid-key"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/interviews"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-001</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
         },
-        "url": "{{baseUrl}}/soap"
-      }
+        {
+          "name": "Create Interview - readonly key (expect 403)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "readonly-key-2026"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidateId\": \"CAND-001\"\n}"
+            },
+            "url": "{{baseUrl}}/rest/interviews"
+          }
+        }
+      ]
     },
     {
-      "name": "SOAP - List Interviews",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "text/xml; charset=utf-8"
-          },
-          {
-            "key": "SOAPAction",
-            "value": "urn:interview-mock#ListInterviews"
+      "name": "REST API",
+      "item": [
+        {
+          "name": "List Interviews",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/interviews"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:ListInterviewsRequest/>\n  </soap:Body>\n</soap:Envelope>"
         },
-        "url": "{{baseUrl}}/soap"
-      }
+        {
+          "name": "List Interviews (filtered by status)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/interviews?status=SCHEDULED"
+          }
+        },
+        {
+          "name": "Get Interview",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/interviews/INT-001"
+          }
+        },
+        {
+          "name": "Create Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidateId\": \"CAND-001\",\n  \"position\": \"QA Automation Engineer\",\n  \"scheduledAt\": \"2026-05-21T10:00:00.000Z\"\n}"
+            },
+            "url": "{{baseUrl}}/rest/interviews"
+          }
+        },
+        {
+          "name": "Update Interview Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": "{{baseUrl}}/rest/interviews/INT-001/status"
+          }
+        },
+        {
+          "name": "Evaluate Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 72\n}"
+            },
+            "url": "{{baseUrl}}/rest/interviews/INT-001/evaluate"
+          }
+        },
+        {
+          "name": "Search Candidates by Email",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/candidates?email=anna.novak@example.test"
+          }
+        },
+        {
+          "name": "Search Candidates by Skill",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/candidates?skill=SQL"
+          }
+        },
+        {
+          "name": "Get Candidate",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/candidates/CAND-001"
+          }
+        }
+      ]
     },
     {
-      "name": "SOAP - Create Interview",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "text/xml; charset=utf-8"
-          },
-          {
-            "key": "SOAPAction",
-            "value": "urn:interview-mock#CreateInterview"
+      "name": "SOAP API",
+      "item": [
+        {
+          "name": "List Interviews",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "urn:interview-mock#ListInterviews"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:ListInterviewsRequest/>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:CreateInterviewRequest>\n      <tns:candidateId>CAND-001</tns:candidateId>\n      <tns:position>QA Automation Engineer</tns:position>\n      <tns:scheduledAt>2026-05-21T10:00:00.000Z</tns:scheduledAt>\n    </tns:CreateInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
         },
-        "url": "{{baseUrl}}/soap"
-      }
-    },
-    {
-      "name": "SOAP - Update Interview Status",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "text/xml; charset=utf-8"
-          },
-          {
-            "key": "SOAPAction",
-            "value": "urn:interview-mock#UpdateInterviewStatus"
+        {
+          "name": "Get Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "urn:interview-mock#GetInterview"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-001</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>IN_PROGRESS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
         },
-        "url": "{{baseUrl}}/soap"
-      }
+        {
+          "name": "Create Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "urn:interview-mock#CreateInterview"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:CreateInterviewRequest>\n      <tns:candidateId>CAND-001</tns:candidateId>\n      <tns:position>QA Automation Engineer</tns:position>\n      <tns:scheduledAt>2026-05-21T10:00:00.000Z</tns:scheduledAt>\n    </tns:CreateInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
+          }
+        },
+        {
+          "name": "Update Interview Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "urn:interview-mock#UpdateInterviewStatus"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>IN_PROGRESS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
+          }
+        }
+      ]
     }
   ]
 }

@@ -10,6 +10,45 @@ const DEFAULT_PORT = 4010;
 const SERVICE_NAME = 'interview-mock';
 const ALLOWED_STATUSES = new Set(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'FAILED']);
 
+const API_KEYS = {
+  'interview-key-2026': { role: 'admin', name: 'Admin' },
+  'readonly-key-2026': { role: 'reader', name: 'Reader' }
+};
+
+const PUBLIC_PATHS = new Set(['/', '/health', '/openapi.yaml', '/rest']);
+
+function requireAuth(req, res, next) {
+  if (PUBLIC_PATHS.has(req.path)) return next();
+  if (req.path === '/soap' && req.method === 'GET') return next();
+
+  const apiKey = req.get('x-api-key');
+  if (!apiKey) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Missing X-API-Key header.' });
+  }
+
+  const keyInfo = API_KEYS[apiKey];
+  if (!keyInfo) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key.' });
+  }
+
+  if (keyInfo.role === 'reader' && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return res.status(403).json({ error: 'FORBIDDEN', message: 'Read-only API key cannot perform write operations.' });
+  }
+
+  req.apiKeyRole = keyInfo.role;
+  req.apiKeyName = keyInfo.name;
+  next();
+}
+
+function requireRole(role) {
+  return (req, res, next) => {
+    if (req.apiKeyRole !== role) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: `This operation requires '${role}' role.` });
+    }
+    next();
+  };
+}
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -177,6 +216,7 @@ function createApp() {
     limit: '1mb'
   }));
   app.use(express.json({ limit: '1mb' }));
+  app.use(requireAuth);
 
   app.get('/', (req, res) => {
     const baseUrl = publicBaseUrl(req);
@@ -318,6 +358,20 @@ function createApp() {
     }
 
     return res.json({ candidate });
+  });
+
+  app.get('/rest/candidates', (req, res) => {
+    const { email, skill } = req.query;
+    let candidates = state.candidates;
+
+    if (email) {
+      candidates = candidates.filter((c) => c.email === email);
+    }
+    if (skill) {
+      candidates = candidates.filter((c) => c.skills.some((s) => s.toLowerCase() === skill.toLowerCase()));
+    }
+
+    res.json({ candidates });
   });
 
   app.get('/soap', (req, res) => {

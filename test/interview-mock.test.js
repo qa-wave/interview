@@ -5,6 +5,9 @@ const app = require('../server');
 let server;
 let baseUrl;
 
+const ADMIN_HEADERS = { 'x-api-key': 'interview-key-2026' };
+const READER_HEADERS = { 'x-api-key': 'readonly-key-2026' };
+
 before(async () => {
   await new Promise((resolve) => {
     server = app.listen(0, () => {
@@ -21,7 +24,7 @@ after(async () => {
   });
 });
 
-test('healthcheck returns service status', async () => {
+test('healthcheck returns service status (no auth required)', async () => {
   const response = await fetch(`${baseUrl}/health`);
   const body = await response.json();
 
@@ -30,8 +33,31 @@ test('healthcheck returns service status', async () => {
   assert.deepEqual(body.protocols, ['REST', 'SOAP']);
 });
 
-test('REST returns interview detail with candidate', async () => {
+test('REST rejects request without API key', async () => {
   const response = await fetch(`${baseUrl}/rest/interviews/INT-001`);
+  assert.equal(response.status, 401);
+});
+
+test('REST rejects invalid API key', async () => {
+  const response = await fetch(`${baseUrl}/rest/interviews/INT-001`, {
+    headers: { 'x-api-key': 'wrong-key' }
+  });
+  assert.equal(response.status, 401);
+});
+
+test('REST reader key cannot create interview', async () => {
+  const response = await fetch(`${baseUrl}/rest/interviews`, {
+    method: 'POST',
+    headers: { ...READER_HEADERS, 'content-type': 'application/json' },
+    body: JSON.stringify({ candidateId: 'CAND-001' })
+  });
+  assert.equal(response.status, 403);
+});
+
+test('REST returns interview detail with candidate', async () => {
+  const response = await fetch(`${baseUrl}/rest/interviews/INT-001`, {
+    headers: ADMIN_HEADERS
+  });
   const body = await response.json();
 
   assert.equal(response.status, 200);
@@ -39,10 +65,42 @@ test('REST returns interview detail with candidate', async () => {
   assert.equal(body.interview.candidate.id, 'CAND-001');
 });
 
+test('REST reader key can list interviews', async () => {
+  const response = await fetch(`${baseUrl}/rest/interviews`, {
+    headers: READER_HEADERS
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(body.interviews.length >= 2);
+});
+
+test('REST can search candidates by email', async () => {
+  const response = await fetch(`${baseUrl}/rest/candidates?email=anna.novak@example.test`, {
+    headers: ADMIN_HEADERS
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.candidates.length, 1);
+  assert.equal(body.candidates[0].id, 'CAND-001');
+});
+
+test('REST can search candidates by skill', async () => {
+  const response = await fetch(`${baseUrl}/rest/candidates?skill=SOAP`, {
+    headers: ADMIN_HEADERS
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.candidates.length, 1);
+  assert.equal(body.candidates[0].id, 'CAND-002');
+});
+
 test('REST can create and evaluate an interview', async () => {
   const createResponse = await fetch(`${baseUrl}/rest/interviews`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { ...ADMIN_HEADERS, 'content-type': 'application/json' },
     body: JSON.stringify({
       candidateId: 'CAND-001',
       position: 'QA Automation Engineer',
@@ -56,7 +114,7 @@ test('REST can create and evaluate an interview', async () => {
 
   const evaluateResponse = await fetch(`${baseUrl}/rest/interviews/${createBody.interview.id}/evaluate`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { ...ADMIN_HEADERS, 'content-type': 'application/json' },
     body: JSON.stringify({ score: 88 })
   });
   const evaluateBody = await evaluateResponse.json();
@@ -66,7 +124,7 @@ test('REST can create and evaluate an interview', async () => {
   assert.equal(evaluateBody.interview.recommendation, 'HIRE');
 });
 
-test('SOAP WSDL is available', async () => {
+test('SOAP WSDL is available (no auth required)', async () => {
   const response = await fetch(`${baseUrl}/soap?wsdl`);
   const text = await response.text();
 
@@ -75,10 +133,23 @@ test('SOAP WSDL is available', async () => {
   assert.match(text, /soap:address/);
 });
 
+test('SOAP rejects request without API key', async () => {
+  const response = await fetch(`${baseUrl}/soap`, {
+    method: 'POST',
+    headers: { 'content-type': 'text/xml; charset=utf-8' },
+    body: `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
+  <soap:Body><tns:ListInterviewsRequest/></soap:Body>
+</soap:Envelope>`
+  });
+  assert.equal(response.status, 401);
+});
+
 test('SOAP can return interview detail', async () => {
   const response = await fetch(`${baseUrl}/soap`, {
     method: 'POST',
     headers: {
+      ...ADMIN_HEADERS,
       'content-type': 'text/xml; charset=utf-8',
       SOAPAction: 'urn:interview-mock#GetInterview'
     },
