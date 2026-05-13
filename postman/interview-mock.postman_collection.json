@@ -121,6 +121,13 @@
           }
         },
         {
+          "name": "Get Interview - missing (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/interviews/INT-999"
+          }
+        },
+        {
           "name": "Create Interview",
           "request": {
             "method": "POST",
@@ -277,6 +284,51 @@
             "body": {
               "mode": "raw",
               "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>IN_PROGRESS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
+          }
+        },
+        {
+          "name": "Get Interview - missing (expect Fault 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction",  "value": "urn:interview-mock#GetInterview" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-999</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
+          }
+        },
+        {
+          "name": "Create Interview - unknown candidate (expect Fault 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction",  "value": "urn:interview-mock#CreateInterview" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:CreateInterviewRequest>\n      <tns:candidateId>CAND-XXX</tns:candidateId>\n      <tns:position>x</tns:position>\n    </tns:CreateInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": "{{baseUrl}}/soap"
+          }
+        },
+        {
+          "name": "Update Interview Status - invalid (expect Fault 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction",  "value": "urn:interview-mock#UpdateInterviewStatus" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>BOGUS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
             },
             "url": "{{baseUrl}}/soap"
           }
