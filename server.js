@@ -10,43 +10,34 @@ const DEFAULT_PORT = 4010;
 const SERVICE_NAME = 'interview-mock';
 const ALLOWED_STATUSES = new Set(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'FAILED']);
 
-const API_KEYS = {
-  'interview-key-2026': { role: 'admin', name: 'Admin' },
-  'readonly-key-2026': { role: 'reader', name: 'Reader' }
-};
+// REST: Bearer token authentication
+const BEARER_TOKEN = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-2026';
+
+// SOAP: WS-Security UsernameToken credentials
+const WS_SECURITY_USER = 'ceps-integration';
+const WS_SECURITY_PASS = 'K7x!mQ9pL2wZ';
 
 const PUBLIC_PATHS = new Set(['/', '/health', '/openapi.yaml', '/rest']);
 
-function requireAuth(req, res, next) {
+function requireBearerAuth(req, res, next) {
   if (PUBLIC_PATHS.has(req.path)) return next();
-  if (req.path === '/soap' && req.method === 'GET') return next();
+  if (req.path === '/soap') return next(); // SOAP has its own auth via WS-Security
 
-  const apiKey = req.get('x-api-key');
-  if (!apiKey) {
-    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Missing X-API-Key header.' });
+  const authHeader = req.get('authorization');
+  if (!authHeader) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Missing Authorization header. Use: Bearer <token>' });
   }
 
-  const keyInfo = API_KEYS[apiKey];
-  if (!keyInfo) {
-    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key.' });
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authorization header must use Bearer scheme.' });
   }
 
-  if (keyInfo.role === 'reader' && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    return res.status(403).json({ error: 'FORBIDDEN', message: 'Read-only API key cannot perform write operations.' });
+  const token = authHeader.substring(7).trim();
+  if (token !== BEARER_TOKEN) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid Bearer token.' });
   }
 
-  req.apiKeyRole = keyInfo.role;
-  req.apiKeyName = keyInfo.name;
   next();
-}
-
-function requireRole(role) {
-  return (req, res, next) => {
-    if (req.apiKeyRole !== role) {
-      return res.status(403).json({ error: 'FORBIDDEN', message: `This operation requires '${role}' role.` });
-    }
-    next();
-  };
 }
 
 function readJson(filePath) {
@@ -216,7 +207,7 @@ function createApp() {
     limit: '1mb'
   }));
   app.use(express.json({ limit: '1mb' }));
-  app.use(requireAuth);
+  app.use(requireBearerAuth);
 
   app.get('/', (req, res) => {
     const baseUrl = publicBaseUrl(req);
@@ -394,6 +385,24 @@ function createApp() {
       }
 
       const parsed = parser.parse(xml);
+
+      // WS-Security UsernameToken validation
+      const header = parsed?.Envelope?.Header;
+      const security = header?.Security;
+      const usernameToken = security?.UsernameToken;
+
+      if (!usernameToken) {
+        return res.status(401).type('application/xml').send(
+          soapFault('WS-Security UsernameToken is required in SOAP Header.', 'AUTHENTICATION_REQUIRED')
+        );
+      }
+
+      if (usernameToken.Username !== WS_SECURITY_USER || usernameToken.Password !== WS_SECURITY_PASS) {
+        return res.status(401).type('application/xml').send(
+          soapFault('Invalid WS-Security credentials.', 'INVALID_CREDENTIALS')
+        );
+      }
+
       const body = parsed?.Envelope?.Body;
 
       if (!body || typeof body !== 'object') {

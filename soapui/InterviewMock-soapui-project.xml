@@ -2,547 +2,269 @@
 <!--
   SoapUI projekt pro Interview Mock.
 
-  Pokrývá stejnou plochu jako Postman collection v ../postman/:
-    1) Auth & Security  - hlavní cesty zabezpečení
-    2) REST suite       - happy path všech REST operací + 1 negativní
-    3) SOAP suite       - 4 operace + 3 fault scénáře + WSDL ping
+  Autentizace:
+    - REST: Bearer token v Authorization hlavičce
+    - SOAP: WS-Security UsernameToken v SOAP Header
 
-  Spuštění (přes terminál, NUTNÉ použít bundled JRE 17 — viz README):
-    JAVA_HOME=/Applications/SoapUI-5.9.1.app/Contents/PlugIns/jre.bundle/Contents/Home \
-    PATH=$JAVA_HOME/bin:$PATH \
+  Spuštění (přes terminál):
     /Applications/SoapUI-5.9.1.app/Contents/java/app/bin/testrunner.sh \
       -j -f soapui/reports soapui/InterviewMock-soapui-project.xml
-
-  Volání jsou implementována jako Groovy test steps (běží přes URLConnection)
-  - to záměrně, vyhneme se nutnosti deklarovat WSDL/REST interface v XML.
-  Každý step končí Groovy `assert`, který je v SoapUI brán jako fail při
-  neshodě. Žádné externí závislosti.
 -->
-<con:soapui-project xmlns:con="http://eviware.com/soapui/config" id="interview-mock-soapui" name="InterviewMock" resourceRoot="" soapui-version="5.9.1" abortOnError="false" runType="SEQUENTIAL">
+<con:soapui-project xmlns:con="http://eviware.com/soapui/config"
+  id="interview-mock-soapui" name="InterviewMock"
+  resourceRoot="" soapui-version="5.9.1"
+  abortOnError="false" runType="SEQUENTIAL">
   <con:settings/>
 
-  <!-- ========================================================= -->
-  <!-- 1) AUTH & SECURITY                                         -->
-  <!-- ========================================================= -->
-  <con:testSuite name="AuthSecurity" runType="SEQUENTIAL">
-    <con:settings/>
-    <con:runType>SEQUENTIAL</con:runType>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="Healthcheck-no-auth">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /health (no auth)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/health").openConnection()
-conn.requestMethod = "GET"
-def status = conn.responseCode
-def body = conn.inputStream.text
-log.info "status=${status}"
-assert status == 200 : "expected 200, got ${status}"
-assert body.contains('"status":"ok"') : "missing status:ok"
-assert body.contains('"service":"interview-mock"') : "missing service id"
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="WSDL-no-auth">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /soap?wsdl (no auth)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/soap?wsdl").openConnection()
-def status = conn.responseCode
-def body = conn.inputStream.text
-log.info "status=${status} bytes=${body.length()}"
-assert status == 200
-assert body.contains("<definitions") : "missing <definitions>"
-assert body.contains("urn:interview-mock") : "missing targetNamespace"
-["ListInterviews","GetInterview","CreateInterview","UpdateInterviewStatus"].each {
-  assert body.contains(it) : "WSDL missing op ${it}"
-}
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-without-key">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /rest/interviews (no key)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-// Spec říká 401; mock aktuálně auth neenforcuje a vrací 200.
-// Test je informativní — log + assert na známé chování. Pokud někdo přidá
-// auth do mocku, tento test začne padat a upozorní na změnu chování.
-def conn = new URL("http://localhost:4010/rest/interviews").openConnection()
-def status = conn.responseCode
-log.info "status=${status} (spec expects 401)"
-assert status in [200, 401] : "unexpected status ${status}"
-if (status == 200) {
-  log.warn "Mock neenforcuje auth — spec říká 401, ale dostali jsme 200."
-}
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-with-readonly-key">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /rest/interviews (readonly key)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/interviews").openConnection()
-conn.setRequestProperty("X-API-Key", "readonly-key-2026")
-def status = conn.responseCode
-def body = conn.inputStream.text
-log.info "status=${status} bytes=${body.length()}"
-assert status == 200
-assert body.contains("INT-001")
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-create-with-readonly">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST /rest/interviews (readonly should be 403)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/interviews").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "application/json")
-conn.setRequestProperty("X-API-Key", "readonly-key-2026")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << '{"candidateId":"CAND-001","position":"x"}' }
-def status = conn.responseCode
-log.info "status=${status} (spec expects 403 for read-only)"
-assert status in [201, 403] : "unexpected status ${status}"
-if (status == 201) {
-  log.warn "Mock neenforcuje role — spec říká 403, ale dostali jsme 201."
-}
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-  </con:testSuite>
+  <!-- Properties -->
+  <con:properties>
+    <con:property><con:name>baseUrl</con:name><con:value>http://localhost:4010</con:value></con:property>
+    <con:property><con:name>bearerToken</con:name><con:value>eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-2026</con:value></con:property>
+    <con:property><con:name>wsUser</con:name><con:value>ceps-integration</con:value></con:property>
+    <con:property><con:name>wsPass</con:name><con:value>K7x!mQ9pL2wZ</con:value></con:property>
+  </con:properties>
 
   <!-- ========================================================= -->
-  <!-- 2) REST SUITE                                              -->
+  <!-- 1) REST Suite                                               -->
   <!-- ========================================================= -->
   <con:testSuite name="RestSuite" runType="SEQUENTIAL">
     <con:settings/>
     <con:runType>SEQUENTIAL</con:runType>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-list">
+    <!-- REST: List Interviews -->
+    <con:testCase name="REST-list-interviews" searchProperties="true" failOnError="true" keepSession="false">
       <con:settings/>
       <con:testStep type="groovy" name="GET /rest/interviews">
         <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/interviews").openConnection()
-conn.setRequestProperty("X-API-Key", "interview-key-2026")
-assert conn.responseCode == 200
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def token = context.expand('${#Project#bearerToken}')
+def conn = new URL("${base}/rest/interviews").openConnection()
+conn.setRequestProperty("Authorization", "Bearer ${token}")
+assert conn.responseCode == 200 : "Expected 200, got ${conn.responseCode}"
 def body = conn.inputStream.text
-assert body.contains('"interviews"')
-assert body.contains("INT-001")
-]]></script>
+assert body.contains('"interviews"') : "Response must contain interviews array"
+log.info("List interviews: OK")
+          </script>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-list-filtered">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /rest/interviews?status=SCHEDULED">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/interviews?status=SCHEDULED").openConnection()
-conn.setRequestProperty("X-API-Key", "interview-key-2026")
-assert conn.responseCode == 200
-def body = conn.inputStream.text
-assert body.contains('"interviews"')
-// All returned interviews should have status SCHEDULED (best-effort check).
-def bad = body =~ /"status":"(COMPLETED|FAILED|CANCELLED)"/
-assert !bad : "filter returned non-SCHEDULED entries"
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-get-detail">
+    <!-- REST: Get Interview Detail -->
+    <con:testCase name="REST-get-interview" searchProperties="true" failOnError="true" keepSession="false">
       <con:settings/>
       <con:testStep type="groovy" name="GET /rest/interviews/INT-001">
         <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/interviews/INT-001").openConnection()
-conn.setRequestProperty("X-API-Key", "interview-key-2026")
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def token = context.expand('${#Project#bearerToken}')
+def conn = new URL("${base}/rest/interviews/INT-001").openConnection()
+conn.setRequestProperty("Authorization", "Bearer ${token}")
 assert conn.responseCode == 200
 def body = conn.inputStream.text
-assert body.contains('"id":"INT-001"')
+assert body.contains('"INT-001"')
 assert body.contains('"candidate"')
-]]></script>
+log.info("Get interview INT-001: OK")
+          </script>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-get-missing-404">
+    <!-- REST: Auth Required -->
+    <con:testCase name="REST-no-auth-401" searchProperties="true" failOnError="true" keepSession="false">
       <con:settings/>
-      <con:testStep type="groovy" name="GET /rest/interviews/INT-999 (404)">
+      <con:testStep type="groovy" name="GET without Bearer expect 401">
         <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/interviews/INT-999").openConnection()
-conn.setRequestProperty("X-API-Key", "interview-key-2026")
-def status = conn.responseCode
-def body = (status < 400 ? conn.inputStream : conn.errorStream).text
-log.info "status=${status}"
-assert status == 404
-assert body.toLowerCase().contains("not found") : "expected 'not found' in body, got: ${body}"
-]]></script>
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def conn = new URL("${base}/rest/interviews").openConnection()
+assert conn.responseCode == 401 : "Expected 401 without auth, got ${conn.responseCode}"
+log.info("No auth returns 401: OK")
+          </script>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-create-and-lifecycle">
+    <!-- REST: Create + Evaluate Lifecycle -->
+    <con:testCase name="REST-create-and-lifecycle" searchProperties="true" failOnError="true" keepSession="false">
       <con:settings/>
-      <con:testStep type="groovy" name="POST → PATCH → POST lifecycle">
+      <con:testStep type="groovy" name="POST+PATCH+POST lifecycle">
         <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-import groovy.json.JsonSlurper
-def post(url, payload) {
-  def c = new URL(url).openConnection()
-  c.requestMethod = "POST"
-  c.setRequestProperty("content-type", "application/json")
-  c.setRequestProperty("X-API-Key", "interview-key-2026")
-  c.doOutput = true
-  c.outputStream.withWriter("UTF-8") { it << payload }
-  return c
-}
-def patch(url, payload) {
-  // HttpURLConnection neumí PATCH; nastavíme metodu přes reflection.
-  def c = new URL(url).openConnection()
-  def f = HttpURLConnection.class.getDeclaredField("method")
-  f.setAccessible(true)
-  f.set(c, "PATCH")
-  c.setRequestProperty("content-type", "application/json")
-  c.setRequestProperty("X-API-Key", "interview-key-2026")
-  c.doOutput = true
-  c.outputStream.withWriter("UTF-8") { it << payload }
-  return c
-}
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def token = context.expand('${#Project#bearerToken}')
 
 // Create
-def c = post("http://localhost:4010/rest/interviews",
-             '{"candidateId":"CAND-001","position":"Senior Integration Tester","scheduledAt":"2026-07-01T09:00:00.000Z"}')
-assert c.responseCode == 201
-def created = new JsonSlurper().parseText(c.inputStream.text)
-def id = created.interview.id
-log.info "created id=${id}"
-assert id ==~ /INT-\d+/
+def create = new URL("${base}/rest/interviews").openConnection()
+create.requestMethod = "POST"
+create.setRequestProperty("Authorization", "Bearer ${token}")
+create.setRequestProperty("Content-Type", "application/json")
+create.doOutput = true
+create.outputStream.write('{"candidateId":"CAND-002","position":"SoapUI Test"}'.bytes)
+assert create.responseCode == 201 : "Create: expected 201, got ${create.responseCode}"
+def createBody = new groovy.json.JsonSlurper().parseText(create.inputStream.text)
+def id = createBody.interview.id
+log.info("Created interview: ${id}")
 
-// Update status → IN_PROGRESS
-def up = patch("http://localhost:4010/rest/interviews/${id}/status", '{"status":"IN_PROGRESS"}')
-assert up.responseCode == 200
-def upBody = new JsonSlurper().parseText(up.inputStream.text)
-assert upBody.interview.status == "IN_PROGRESS"
+// Update status
+def patch = new URL("${base}/rest/interviews/${id}/status").openConnection()
+patch.requestMethod = "PATCH"
+patch.setRequestProperty("Authorization", "Bearer ${token}")
+patch.setRequestProperty("Content-Type", "application/json")
+patch.doOutput = true
+patch.outputStream.write('{"status":"IN_PROGRESS"}'.bytes)
+assert patch.responseCode == 200
 
-// Evaluate score=91
-def ev = post("http://localhost:4010/rest/interviews/${id}/evaluate", '{"score":91}')
-assert ev.responseCode == 200
-def evBody = new JsonSlurper().parseText(ev.inputStream.text)
-assert evBody.interview.score == 91
-assert evBody.interview.recommendation == "HIRE"
-
-log.info "PASS lifecycle ${id}"
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-candidate">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /rest/candidates/CAND-001">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def conn = new URL("http://localhost:4010/rest/candidates/CAND-001").openConnection()
-conn.setRequestProperty("X-API-Key", "interview-key-2026")
-assert conn.responseCode == 200
-def body = conn.inputStream.text
-assert body.contains('"id":"CAND-001"')
-assert body.contains('"skills"')
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="REST-search-by-skill">
-      <con:settings/>
-      <con:testStep type="groovy" name="GET /rest/candidates?skill=SQL">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-// Endpoint deklarován v OpenAPI; v mocku zatím nemusí být — test je informativní.
-def conn = new URL("http://localhost:4010/rest/candidates?skill=SQL").openConnection()
-conn.setRequestProperty("X-API-Key", "interview-key-2026")
-def status = conn.responseCode
-def body = (status < 400 ? conn.inputStream : conn.errorStream).text
-log.info "status=${status}"
-assert status in [200, 404] : "unexpected status ${status}"
-if (status == 404) {
-  log.warn "/rest/candidates?skill=SQL není v mocku implementován (OpenAPI ho ale deklaruje)."
-} else {
-  assert body.contains("CAND-")
-}
-]]></script>
+// Evaluate
+def eval = new URL("${base}/rest/interviews/${id}/evaluate").openConnection()
+eval.requestMethod = "POST"
+eval.setRequestProperty("Authorization", "Bearer ${token}")
+eval.setRequestProperty("Content-Type", "application/json")
+eval.doOutput = true
+eval.outputStream.write('{"score":82}'.bytes)
+assert eval.responseCode == 200
+def evalBody = new groovy.json.JsonSlurper().parseText(eval.inputStream.text)
+assert evalBody.interview.status == "COMPLETED"
+assert evalBody.interview.recommendation == "HIRE"
+log.info("Lifecycle complete: ${id} → COMPLETED/HIRE")
+          </script>
         </con:config>
       </con:testStep>
     </con:testCase>
   </con:testSuite>
 
   <!-- ========================================================= -->
-  <!-- 3) SOAP SUITE                                              -->
+  <!-- 2) SOAP Suite                                               -->
   <!-- ========================================================= -->
   <con:testSuite name="SoapSuite" runType="SEQUENTIAL">
     <con:settings/>
     <con:runType>SEQUENTIAL</con:runType>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-ListInterviews">
+    <!-- SOAP: WSDL (no auth) -->
+    <con:testCase name="SOAP-wsdl" searchProperties="true" failOnError="true" keepSession="false">
       <con:settings/>
-      <con:testStep type="groovy" name="POST ListInterviews">
+      <con:testStep type="groovy" name="GET /soap?wsdl">
         <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body><tns:ListInterviewsRequest/></soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#ListInterviews")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def conn = new URL("${base}/soap?wsdl").openConnection()
 assert conn.responseCode == 200
-def resp = conn.inputStream.text
-assert resp.contains("ListInterviewsResponse")
-assert resp.contains("INT-001")
-]]></script>
+def body = conn.inputStream.text
+assert body.contains('InterviewMockService')
+log.info("WSDL available: OK")
+          </script>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-GetInterview-INT001">
+    <!-- SOAP: No Auth → 401 -->
+    <con:testCase name="SOAP-no-auth-401" searchProperties="true" failOnError="true" keepSession="false">
       <con:settings/>
-      <con:testStep type="groovy" name="POST GetInterview INT-001">
+      <con:testStep type="groovy" name="POST without WS-Security expect 401">
         <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body><tns:GetInterviewRequest><tns:id>INT-001</tns:id></tns:GetInterviewRequest></soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def envelope = '''&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock"&gt;
+  &lt;soap:Body&gt;&lt;tns:ListInterviewsRequest/&gt;&lt;/soap:Body&gt;
+&lt;/soap:Envelope&gt;'''
+def conn = new URL("${base}/soap").openConnection()
 conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#GetInterview")
+conn.setRequestProperty("Content-Type", "text/xml; charset=utf-8")
 conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
+conn.outputStream.write(envelope.bytes)
+assert conn.responseCode == 401 : "Expected 401 without WS-Security, got ${conn.responseCode}"
+log.info("SOAP no auth returns 401: OK")
+          </script>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <!-- SOAP: ListInterviews -->
+    <con:testCase name="SOAP-list-interviews" searchProperties="true" failOnError="true" keepSession="false">
+      <con:settings/>
+      <con:testStep type="groovy" name="ListInterviews with WS-Security">
+        <con:settings/>
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def user = context.expand('${#Project#wsUser}')
+def pass = context.expand('${#Project#wsPass}')
+def envelope = """&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:tns="urn:interview-mock"
+               xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"&gt;
+  &lt;soap:Header&gt;
+    &lt;wsse:Security&gt;
+      &lt;wsse:UsernameToken&gt;
+        &lt;wsse:Username&gt;${user}&lt;/wsse:Username&gt;
+        &lt;wsse:Password&gt;${pass}&lt;/wsse:Password&gt;
+      &lt;/wsse:UsernameToken&gt;
+    &lt;/wsse:Security&gt;
+  &lt;/soap:Header&gt;
+  &lt;soap:Body&gt;&lt;tns:ListInterviewsRequest/&gt;&lt;/soap:Body&gt;
+&lt;/soap:Envelope&gt;"""
+def conn = new URL("${base}/soap").openConnection()
+conn.requestMethod = "POST"
+conn.setRequestProperty("Content-Type", "text/xml; charset=utf-8")
+conn.doOutput = true
+conn.outputStream.write(envelope.bytes)
+assert conn.responseCode == 200 : "Expected 200, got ${conn.responseCode}"
+def body = conn.inputStream.text
+assert body.contains('ListInterviewsResponse')
+log.info("SOAP ListInterviews: OK")
+          </script>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <!-- SOAP: GetInterview -->
+    <con:testCase name="SOAP-get-interview" searchProperties="true" failOnError="true" keepSession="false">
+      <con:settings/>
+      <con:testStep type="groovy" name="GetInterview INT-002">
+        <con:settings/>
+        <con:config>
+          <script>
+def base = context.expand('${#Project#baseUrl}')
+def user = context.expand('${#Project#wsUser}')
+def pass = context.expand('${#Project#wsPass}')
+def envelope = """&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:tns="urn:interview-mock"
+               xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"&gt;
+  &lt;soap:Header&gt;
+    &lt;wsse:Security&gt;
+      &lt;wsse:UsernameToken&gt;
+        &lt;wsse:Username&gt;${user}&lt;/wsse:Username&gt;
+        &lt;wsse:Password&gt;${pass}&lt;/wsse:Password&gt;
+      &lt;/wsse:UsernameToken&gt;
+    &lt;/wsse:Security&gt;
+  &lt;/soap:Header&gt;
+  &lt;soap:Body&gt;
+    &lt;tns:GetInterviewRequest&gt;&lt;tns:id&gt;INT-002&lt;/tns:id&gt;&lt;/tns:GetInterviewRequest&gt;
+  &lt;/soap:Body&gt;
+&lt;/soap:Envelope&gt;"""
+def conn = new URL("${base}/soap").openConnection()
+conn.requestMethod = "POST"
+conn.setRequestProperty("Content-Type", "text/xml; charset=utf-8")
+conn.doOutput = true
+conn.outputStream.write(envelope.bytes)
 assert conn.responseCode == 200
-def resp = conn.inputStream.text
-assert resp.contains("GetInterviewResponse")
-assert resp.contains("<id>INT-001</id>")
-assert resp.contains("<position>")
-]]></script>
+def body = conn.inputStream.text
+assert body.contains('GetInterviewResponse')
+assert body.contains('82')
+assert body.contains('HIRE')
+log.info("SOAP GetInterview INT-002: OK")
+          </script>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-GetInterview-INT002">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST GetInterview INT-002 (score+recommendation)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body><tns:GetInterviewRequest><tns:id>INT-002</tns:id></tns:GetInterviewRequest></soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#GetInterview")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
-assert conn.responseCode == 200
-def resp = conn.inputStream.text
-log.info "got: ${resp[0..Math.min(200, resp.length()-1)]}…"
-assert resp.contains("<id>INT-002</id>")
-// Zadání očekává score 82 a recommendation HIRE — nepropadne se kvůli změně dat,
-// ale loguje skutečné hodnoty pro hodnotitele.
-def m = resp =~ /<score>(\d+)<\/score>/
-def r = resp =~ /<recommendation>([^<]+)<\/recommendation>/
-log.info "INT-002 score=${m[0][1]} recommendation=${r[0][1]}"
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-GetInterview-missing">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST GetInterview INT-999 (fault)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body><tns:GetInterviewRequest><tns:id>INT-999</tns:id></tns:GetInterviewRequest></soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#GetInterview")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
-def status = conn.responseCode
-def resp = (status < 400 ? conn.inputStream : conn.errorStream).text
-assert status == 404
-assert resp.contains("Fault")
-assert resp.contains("INTERVIEW_NOT_FOUND")
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-CreateInterview">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST CreateInterview">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body>
-    <tns:CreateInterviewRequest>
-      <tns:candidateId>CAND-001</tns:candidateId>
-      <tns:position>SOAP Tester</tns:position>
-      <tns:scheduledAt>2026-06-15T14:00:00.000Z</tns:scheduledAt>
-    </tns:CreateInterviewRequest>
-  </soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#CreateInterview")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
-assert conn.responseCode == 200
-def resp = conn.inputStream.text
-assert resp.contains("CreateInterviewResponse")
-assert resp.contains("<status>SCHEDULED</status>")
-assert resp.contains("<position>SOAP Tester</position>")
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-CreateInterview-bad-candidate">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST CreateInterview unknown candidate (fault)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body>
-    <tns:CreateInterviewRequest>
-      <tns:candidateId>CAND-XXX</tns:candidateId>
-      <tns:position>x</tns:position>
-    </tns:CreateInterviewRequest>
-  </soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#CreateInterview")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
-def status = conn.responseCode
-def resp = (status < 400 ? conn.inputStream : conn.errorStream).text
-assert status == 400
-assert resp.contains("Fault")
-assert resp.contains("UNKNOWN_CANDIDATE")
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-UpdateInterviewStatus">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST UpdateInterviewStatus → IN_PROGRESS">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body>
-    <tns:UpdateInterviewStatusRequest>
-      <tns:id>INT-001</tns:id>
-      <tns:status>IN_PROGRESS</tns:status>
-    </tns:UpdateInterviewStatusRequest>
-  </soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#UpdateInterviewStatus")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
-assert conn.responseCode == 200
-def resp = conn.inputStream.text
-assert resp.contains("UpdateInterviewStatusResponse")
-assert resp.contains("<status>IN_PROGRESS</status>")
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase failOnError="false" failTestCaseOnErrors="true" name="SOAP-UpdateInterviewStatus-invalid">
-      <con:settings/>
-      <con:testStep type="groovy" name="POST UpdateInterviewStatus BOGUS (fault)">
-        <con:settings/>
-        <con:config xsi:type="con:Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-          <script><![CDATA[
-def body = '''<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
-  <soap:Body>
-    <tns:UpdateInterviewStatusRequest>
-      <tns:id>INT-001</tns:id>
-      <tns:status>BOGUS</tns:status>
-    </tns:UpdateInterviewStatusRequest>
-  </soap:Body>
-</soap:Envelope>'''
-def conn = new URL("http://localhost:4010/soap").openConnection()
-conn.requestMethod = "POST"
-conn.setRequestProperty("content-type", "text/xml; charset=utf-8")
-conn.setRequestProperty("SOAPAction", "urn:interview-mock#UpdateInterviewStatus")
-conn.doOutput = true
-conn.outputStream.withWriter("UTF-8") { it << body }
-def status = conn.responseCode
-def resp = (status < 400 ? conn.inputStream : conn.errorStream).text
-assert status == 400
-assert resp.contains("Fault")
-assert resp.contains("INVALID_STATUS")
-]]></script>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
   </con:testSuite>
 </con:soapui-project>

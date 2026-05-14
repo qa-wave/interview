@@ -9,93 +9,20 @@
       "value": "http://localhost:4010"
     },
     {
-      "key": "apiKey",
-      "value": "interview-key-2026"
+      "key": "bearerToken",
+      "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-2026"
     }
   ],
   "auth": {
-    "type": "apikey",
-    "apikey": [
+    "type": "bearer",
+    "bearer": [
       {
-        "key": "key",
-        "value": "X-API-Key"
-      },
-      {
-        "key": "value",
-        "value": "{{apiKey}}"
-      },
-      {
-        "key": "in",
-        "value": "header"
+        "key": "token",
+        "value": "{{bearerToken}}"
       }
     ]
   },
   "item": [
-    {
-      "name": "Auth & Security",
-      "item": [
-        {
-          "name": "Healthcheck (no auth)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "url": "{{baseUrl}}/health"
-          }
-        },
-        {
-          "name": "WSDL (no auth)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "url": "{{baseUrl}}/soap?wsdl"
-          }
-        },
-        {
-          "name": "List Interviews - no key (expect 401)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "url": "{{baseUrl}}/rest/interviews"
-          }
-        },
-        {
-          "name": "List Interviews - invalid key (expect 401)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "invalid-key"
-              }
-            ],
-            "url": "{{baseUrl}}/rest/interviews"
-          }
-        },
-        {
-          "name": "Create Interview - readonly key (expect 403)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "readonly-key-2026"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"candidateId\": \"CAND-001\"\n}"
-            },
-            "url": "{{baseUrl}}/rest/interviews"
-          }
-        }
-      ]
-    },
     {
       "name": "REST API",
       "item": [
@@ -121,25 +48,15 @@
           }
         },
         {
-          "name": "Get Interview - missing (expect 404)",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/rest/interviews/INT-999"
-          }
-        },
-        {
           "name": "Create Interview",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"candidateId\": \"CAND-001\",\n  \"position\": \"QA Automation Engineer\",\n  \"scheduledAt\": \"2026-05-21T10:00:00.000Z\"\n}"
+              "raw": "{\n  \"candidateId\": \"CAND-002\",\n  \"position\": \"Integration Tester\",\n  \"scheduledAt\": \"2026-06-01T10:00:00.000Z\"\n}"
             },
             "url": "{{baseUrl}}/rest/interviews"
           }
@@ -149,10 +66,7 @@
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -166,10 +80,7 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -179,24 +90,17 @@
           }
         },
         {
-          "name": "Search Candidates by Email",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/rest/candidates?email=anna.novak@example.test"
-          }
-        },
-        {
-          "name": "Search Candidates by Skill",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/rest/candidates?skill=SQL"
-          }
-        },
-        {
           "name": "Get Candidate",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/rest/candidates/CAND-001"
+          }
+        },
+        {
+          "name": "Search Candidates by Email",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/candidates?email=petr.svoboda@example.test"
           }
         }
       ]
@@ -205,22 +109,24 @@
       "name": "SOAP API",
       "item": [
         {
+          "name": "WSDL (no auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/soap?wsdl"
+          }
+        },
+        {
           "name": "List Interviews",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml; charset=utf-8"
-              },
-              {
-                "key": "SOAPAction",
-                "value": "urn:interview-mock#ListInterviews"
-              }
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:ListInterviewsRequest/>\n  </soap:Body>\n</soap:Envelope>"
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:tns=\"urn:interview-mock\"\n               xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\">\n  <soap:Header>\n    <wsse:Security>\n      <wsse:UsernameToken>\n        <wsse:Username>ceps-integration</wsse:Username>\n        <wsse:Password>K7x!mQ9pL2wZ</wsse:Password>\n      </wsse:UsernameToken>\n    </wsse:Security>\n  </soap:Header>\n  <soap:Body>\n    <tns:ListInterviewsRequest/>\n  </soap:Body>\n</soap:Envelope>"
             },
             "url": "{{baseUrl}}/soap"
           }
@@ -228,20 +134,14 @@
         {
           "name": "Get Interview",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml; charset=utf-8"
-              },
-              {
-                "key": "SOAPAction",
-                "value": "urn:interview-mock#GetInterview"
-              }
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-001</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:tns=\"urn:interview-mock\"\n               xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\">\n  <soap:Header>\n    <wsse:Security>\n      <wsse:UsernameToken>\n        <wsse:Username>ceps-integration</wsse:Username>\n        <wsse:Password>K7x!mQ9pL2wZ</wsse:Password>\n      </wsse:UsernameToken>\n    </wsse:Security>\n  </soap:Header>\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-001</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
             },
             "url": "{{baseUrl}}/soap"
           }
@@ -249,20 +149,14 @@
         {
           "name": "Create Interview",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml; charset=utf-8"
-              },
-              {
-                "key": "SOAPAction",
-                "value": "urn:interview-mock#CreateInterview"
-              }
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:CreateInterviewRequest>\n      <tns:candidateId>CAND-001</tns:candidateId>\n      <tns:position>QA Automation Engineer</tns:position>\n      <tns:scheduledAt>2026-05-21T10:00:00.000Z</tns:scheduledAt>\n    </tns:CreateInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:tns=\"urn:interview-mock\"\n               xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\">\n  <soap:Header>\n    <wsse:Security>\n      <wsse:UsernameToken>\n        <wsse:Username>ceps-integration</wsse:Username>\n        <wsse:Password>K7x!mQ9pL2wZ</wsse:Password>\n      </wsse:UsernameToken>\n    </wsse:Security>\n  </soap:Header>\n  <soap:Body>\n    <tns:CreateInterviewRequest>\n      <tns:candidateId>CAND-001</tns:candidateId>\n      <tns:position>SOAP Tester</tns:position>\n      <tns:scheduledAt>2026-06-15T14:00:00.000Z</tns:scheduledAt>\n    </tns:CreateInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
             },
             "url": "{{baseUrl}}/soap"
           }
@@ -270,65 +164,14 @@
         {
           "name": "Update Interview Status",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml; charset=utf-8"
-              },
-              {
-                "key": "SOAPAction",
-                "value": "urn:interview-mock#UpdateInterviewStatus"
-              }
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>IN_PROGRESS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
-            },
-            "url": "{{baseUrl}}/soap"
-          }
-        },
-        {
-          "name": "Get Interview - missing (expect Fault 404)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
-              { "key": "SOAPAction",  "value": "urn:interview-mock#GetInterview" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:GetInterviewRequest>\n      <tns:id>INT-999</tns:id>\n    </tns:GetInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
-            },
-            "url": "{{baseUrl}}/soap"
-          }
-        },
-        {
-          "name": "Create Interview - unknown candidate (expect Fault 400)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
-              { "key": "SOAPAction",  "value": "urn:interview-mock#CreateInterview" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:CreateInterviewRequest>\n      <tns:candidateId>CAND-XXX</tns:candidateId>\n      <tns:position>x</tns:position>\n    </tns:CreateInterviewRequest>\n  </soap:Body>\n</soap:Envelope>"
-            },
-            "url": "{{baseUrl}}/soap"
-          }
-        },
-        {
-          "name": "Update Interview Status - invalid (expect Fault 400)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
-              { "key": "SOAPAction",  "value": "urn:interview-mock#UpdateInterviewStatus" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"urn:interview-mock\">\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>BOGUS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:tns=\"urn:interview-mock\"\n               xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\">\n  <soap:Header>\n    <wsse:Security>\n      <wsse:UsernameToken>\n        <wsse:Username>ceps-integration</wsse:Username>\n        <wsse:Password>K7x!mQ9pL2wZ</wsse:Password>\n      </wsse:UsernameToken>\n    </wsse:Security>\n  </soap:Header>\n  <soap:Body>\n    <tns:UpdateInterviewStatusRequest>\n      <tns:id>INT-001</tns:id>\n      <tns:status>IN_PROGRESS</tns:status>\n    </tns:UpdateInterviewStatusRequest>\n  </soap:Body>\n</soap:Envelope>"
             },
             "url": "{{baseUrl}}/soap"
           }

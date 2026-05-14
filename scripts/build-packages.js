@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, execSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const distDir = path.join(root, 'dist');
@@ -91,3 +91,31 @@ for (const item of packages) {
 }
 
 console.log(`Packages created in ${packageDir}`);
+
+// Build Windows installer (NSIS)
+try {
+  execSync('makensis -VERSION', { stdio: 'ignore' });
+
+  const version = require(path.join(root, 'package.json')).version;
+  const nsiScript = path.join(root, 'scripts', 'installer.nsi');
+  const winSourceDir = path.join(packageDir, 'interview-mock-windows-x64');
+  const installerFile = path.join(packageDir, `interview-mock-${version}-setup.exe`);
+
+  const soapuiDir = path.join(root, 'soapui');
+  const sqlDir = path.join(root, 'sql');
+  const docsDir = path.join(root, 'docs');
+
+  run('makensis', [
+    `-DPRODUCT_VERSION=${version}`,
+    `-DSOURCE_DIR=${winSourceDir}`,
+    `-DDOCS_DIR=${docsDir}`,
+    `-DSOAPUI_DIR=${soapuiDir}`,
+    `-DSQL_DIR=${sqlDir}`,
+    `-DOUT_FILE=${installerFile}`,
+    nsiScript
+  ]);
+
+  console.log(`Windows installer created: ${installerFile}`);
+} catch {
+  console.log('Skipping Windows installer (makensis not found). Install NSIS: brew install nsis');
+}

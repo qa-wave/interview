@@ -5,14 +5,13 @@ info:
 servers:
   - url: http://localhost:4010
 security:
-  - apiKey: []
+  - bearerAuth: []
 components:
   securitySchemes:
-    apiKey:
-      type: apiKey
-      in: header
-      name: X-API-Key
-      description: "Admin key: interview-key-2026, Read-only key: readonly-key-2026"
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-2026"
 paths:
   /health:
     get:

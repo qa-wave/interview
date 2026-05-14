@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="urn:interview-mock">
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:tns="urn:interview-mock"
+               xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+  <soap:Header>
+    <wsse:Security>
+      <wsse:UsernameToken>
+        <wsse:Username>ceps-integration</wsse:Username>
+        <wsse:Password>K7x!mQ9pL2wZ</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+  </soap:Header>
   <soap:Body>
     <tns:UpdateInterviewStatusRequest>
       <tns:id>INT-001</tns:id>
