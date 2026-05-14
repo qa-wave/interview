@@ -33,7 +33,8 @@
       "mocks/**/*.json",
       "openapi.yaml",
       "README.md",
-      "dashboard/**/*.html"
+      "dashboard/**/*.html",
+      "docs/openapi-*.yaml"
     ],
     "targets": [
       "node20-macos-arm64",

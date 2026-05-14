@@ -17,7 +17,7 @@ const BEARER_TOKEN = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-20
 const WS_SECURITY_USER = 'ceps-integration';
 const WS_SECURITY_PASS = 'K7x!mQ9pL2wZ';
 
-const PUBLIC_PATHS = new Set(['/', '/health', '/openapi.yaml', '/rest']);
+const PUBLIC_PATHS = new Set(['/', '/health', '/openapi.yaml', '/openapi-candidates.yaml', '/openapi-interviews.yaml', '/rest']);
 const LOG_BUFFER_SIZE = 200;
 const startedAt = Date.now();
 
@@ -277,6 +277,14 @@ function createApp() {
 
   app.get('/openapi.yaml', (_req, res) => {
     res.type('text/yaml').send(fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8'));
+  });
+
+  app.get('/openapi-candidates.yaml', (_req, res) => {
+    res.type('text/yaml').send(fs.readFileSync(path.join(__dirname, 'docs', 'openapi-candidates.yaml'), 'utf8'));
+  });
+
+  app.get('/openapi-interviews.yaml', (_req, res) => {
+    res.type('text/yaml').send(fs.readFileSync(path.join(__dirname, 'docs', 'openapi-interviews.yaml'), 'utf8'));
   });
 
   app.get('/rest', (req, res) => {

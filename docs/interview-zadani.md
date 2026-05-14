@@ -2,24 +2,26 @@
 
 ## O čem to je
 
-Před vámi běží mock služba **Interview Mock**, která simuluje správu pohovorů a kandidátů. Nabízí **REST API** (JSON) i **SOAP webovou službu** (XML). Každé rozhraní používá jiný typ zabezpečení.
+Před vámi běží 4 mock služby simulující správu pohovorů a kandidátů. Služby spolu sdílejí data — výstup jedné služby je vstupem další. Vaším úkolem je provolat celý flow od nalezení kandidáta až po ověření jeho hodnocení, a to napříč REST i SOAP rozhraními.
 
-Vyberte si nástroj — **Postman**, **SoapUI** nebo oba — a splňte úlohy níže. Není nutné provolávat všechny endpointy, důležité je prokázat, že umíte pracovat s oběma protokoly a s předáváním dat mezi volánami.
+Vyberte si nástroj — **Postman**, **SoapUI** nebo oba.
 
-**Časový limit:** 70 minut
+**Časový limit:** 60 minut
 
 ---
 
-## Přístupy ke službě
+## Služby
 
-| Co | URL |
-|---|---|
-| Swagger (OpenAPI) | `http://localhost:4010/openapi.yaml` |
-| WSDL | `http://localhost:4010/soap?wsdl` |
+Otevřete si dashboard: **http://localhost:4010/dashboard** — najdete tam seznam služeb, přístupové údaje a specifikace (Swagger / WSDL).
+
+| # | Služba | Protokol | Zabezpečení | Spec |
+|---|---|---|---|---|
+| 1 | **Candidates** | REST | Bearer token | `/openapi-candidates.yaml` |
+| 2 | **Interviews** | REST | Bearer token | `/openapi-interviews.yaml` |
+| 3 | **Interviews** | SOAP | WS-Security | `/soap?wsdl` |
+| 4 | **Evaluations** | SOAP | WS-Security | `/soap?wsdl` |
 
 ### REST — Bearer token
-
-REST API vyžaduje hlavičku `Authorization` s Bearer tokenem:
 
 ```
 Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-2026
@@ -27,82 +29,56 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-20
 
 ### SOAP — WS-Security UsernameToken
 
-SOAP služba vyžaduje WS-Security hlavičku v SOAP Envelope s těmito údaji:
-
 | Parametr | Hodnota |
 |---|---|
 | Username | `ceps-integration` |
 | Password | `K7x!mQ9pL2wZ` |
 
-Příklad SOAP Header:
+---
 
-```xml
-<soap:Header>
-  <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
-    <wsse:UsernameToken>
-      <wsse:Username>ceps-integration</wsse:Username>
-      <wsse:Password>K7x!mQ9pL2wZ</wsse:Password>
-    </wsse:UsernameToken>
-  </wsse:Security>
-</soap:Header>
-```
+## Úloha 1: Najděte kandidáta (Candidates REST) — 10 minut
+
+1. Prostudujte Swagger specifikaci služby Candidates.
+2. Vyhledejte kandidáta podle emailu `petr.svoboda@example.test`.
+3. Z odpovědi si **uložte jeho `id`** — budete ho potřebovat v další úloze.
 
 ---
 
-## Úloha 1: REST API s Bearer autentizací (25 minut)
+## Úloha 2: Vytvořte pohovor (Interviews REST) — 15 minut
 
-Otevřete si Swagger specifikaci (`/openapi.yaml`) a projděte dostupné endpointy.
-
-**a) Ověřte zabezpečení**
-- Zavolejte `GET /rest/interviews` **bez** tokenu — měli byste dostat `401`.
-- Zavolejte totéž **s** Bearer tokenem — měli byste dostat `200` a seznam pohovorů.
-
-**b) Získejte detail pohovoru**
-- Zavolejte `GET /rest/interviews/INT-001`. Ověřte, že odpověď obsahuje informace o kandidátovi (jméno, email, skills).
-
-**c) Vytvořte nový pohovor a proveďte jeho lifecycle**
-1. Vytvořte pohovor (`POST /rest/interviews`) pro kandidáta `CAND-002` na pozici `Integration Tester`.
-2. Z odpovědi **si uložte `id`** nového pohovoru — budete ho potřebovat dál.
-3. Změňte status pohovoru na `IN_PROGRESS` (`PATCH /rest/interviews/{id}/status`).
-4. Ohodnoťte pohovor skóre `72` (`POST /rest/interviews/{id}/evaluate`).
-5. Ověřte, že se v odpovědi změnil `status` na `COMPLETED` a `recommendation` odpovídá skóre.
-
-**d) Vyzkoušejte chybový scénář**
-- Zkuste získat neexistující pohovor (`INT-999`), nebo odeslat nevalidní skóre (`150`). Jaký status kód a chybovou zprávu server vrátí?
+1. Prostudujte Swagger specifikaci služby Interviews.
+2. Vytvořte pohovor (`POST /rest/interviews`) — použijte **`candidateId` z úlohy 1**, pozice `Integration Tester`.
+3. Z odpovědi si **uložte `id` pohovoru**.
+4. Změňte status pohovoru na `IN_PROGRESS` (`PATCH /rest/interviews/{id}/status`).
+5. Vyzkoušejte chybový scénář — zkuste vytvořit pohovor pro neexistujícího kandidáta. Jaký status kód dostanete?
 
 ---
 
-## Úloha 2: SOAP API s WS-Security (25 minut)
+## Úloha 3: Ověřte přes SOAP (Interviews SOAP) — 15 minut
 
-Otevřete si WSDL definici (`/soap?wsdl`) a prostudujte dostupné operace.
-
-**a) Ověřte zabezpečení**
-- Odešlete SOAP request **bez** WS-Security hlavičky — měli byste dostat SOAP Fault s kódem `AUTHENTICATION_REQUIRED`.
-- Odešlete stejný request **s** WS-Security (username + password) — měl by projít.
-
-**b) Načtěte pohovory**
-- Zavolejte operaci `ListInterviews`. Ověřte, že odpověď obsahuje XML se seznamem pohovorů.
-
-**c) Vytvořte pohovor přes SOAP a ověřte přes REST**
-1. Vytvořte pohovor pomocí operace `CreateInterview` (kandidát `CAND-001`, pozice `SOAP Tester`).
-2. Z odpovědi si poznamenejte `id` nového pohovoru.
-3. **Přepněte se do RESTu** — zavolejte `GET /rest/interviews/{id}` a ověřte, že pohovor vytvořený přes SOAP je viditelný i přes REST API. To dokazuje, že obě rozhraní sdílejí stejná data.
-
-**d) Změňte stav přes SOAP**
-- Pomocí operace `UpdateInterviewStatus` změňte status pohovoru na `CANCELLED`.
+1. Prostudujte WSDL definici.
+2. Zavolejte operaci `GetInterview` s **`id` pohovoru z úlohy 2**. Ověřte, že status je `IN_PROGRESS`.
+3. Vytvořte **další** pohovor přes SOAP (`CreateInterview`) pro **stejného kandidáta** na pozici `SOAP Tester`.
+4. Ověřte, že nově vytvořený pohovor je viditelný přes REST (`GET /rest/interviews/{id}`).
 
 ---
 
-## Úloha 3: SQL (10 minut)
+## Úloha 4: Ohodnoťte pohovor (Evaluations) — 10 minut
 
-Na ploše najdete SQLite databázi `sql/interview.db` se schématem popsaným v `sql/schema.sql`. Databáze obsahuje tabulky `companies`, `positions`, `candidates`, `skills`, `candidate_skills`, `interviews`, `evaluations` a `interview_status_history`.
+1. Ohodnoťte pohovor z úlohy 2 skóre `82` přes REST (`POST /rest/interviews/{id}/evaluate`).
+2. Ověřte výsledek přes SOAP — zavolejte `GetInterview` a zkontrolujte, že `status` je `COMPLETED` a `recommendation` je `HIRE`.
+3. Ohodnoťte pohovor z úlohy 3 skóre `45` a ověřte, že recommendation je `NO_HIRE`.
 
-Otevřete terminál a spusťte `sqlite3 sql/interview.db`. Napište SQL dotazy pro následující úlohy:
+---
 
-**a)** Vypište jména a emaily všech kandidátů, kteří mají skill `SOAP` na úrovni `expert`.
+## Úloha 5: SQL — 10 minut
 
-**b)** Kolik pohovorů je v jednotlivých stavech? Výsledek by měl mít sloupce `status` a `pocet`.
+Na ploše najdete SQLite databázi `sql/interview.db`. Spusťte `sqlite3 sql/interview.db`.
 
-**c)** Vypište kandidáty, kteří **nemají žádný** naplánovaný pohovor (tzn. neexistuje záznam v tabulce `interviews` pro jejich `id`).
+**a)** Vypište kandidáty, kteří mají skill `SOAP` na úrovni `expert`.
 
-**d)** Pro každého kandidáta, který má alespoň jeden dokončený pohovor (`COMPLETED`), vypište jeho jméno a **průměrné skóre** zaokrouhlené na celé číslo. Seřaďte sestupně podle průměru.
+**b)** Kolik pohovorů je v jednotlivých stavech? (`status`, `pocet`)
+
+**c)** Vypište kandidáty bez pohovoru.
+
+**d)** Pro kandidáty s dokončeným pohovorem vypište průměrné skóre (sestupně).
