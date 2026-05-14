@@ -32,7 +32,8 @@
     "assets": [
       "mocks/**/*.json",
       "openapi.yaml",
-      "README.md"
+      "README.md",
+      "dashboard/**/*.html"
     ],
     "targets": [
       "node20-macos-arm64",

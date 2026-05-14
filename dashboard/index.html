@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Mock — Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/xml.min.js"></script>
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .log-row { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  #logBody tr:nth-child(even) { background: rgb(248 250 252); }
+  .hljs { background: transparent !important; padding: 0 !important; }
+  .spec-panel pre { margin: 0; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<!-- Header -->
+<header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div id="statusDot" class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+    <h1 class="text-lg font-semibold text-slate-900">Interview Mock</h1>
+  </div>
+  <div class="flex items-center gap-4">
+    <span class="text-sm text-slate-500">Uptime: <strong id="uptime">—</strong></span>
+    <span class="text-sm text-slate-500">RAM: <strong id="memory">—</strong></span>
+    <a href="/health" target="_blank" class="text-sm text-slate-400 hover:text-slate-600 transition">Health</a>
+    <a href="/" target="_blank" class="text-sm text-slate-400 hover:text-slate-600 transition">Service Info</a>
+    <button onclick="resetData()" class="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition font-medium">Reset Data</button>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+  <!-- Status Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+      <div class="text-sm text-slate-500 mb-1">Requests</div>
+      <div class="text-2xl font-bold text-slate-900" id="totalRequests">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+      <div class="text-sm text-slate-500 mb-1">Interviews</div>
+      <div class="text-2xl font-bold text-slate-900" id="interviews">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+      <div class="text-sm text-slate-500 mb-1">Candidates</div>
+      <div class="text-2xl font-bold text-slate-900" id="candidates">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+      <div class="text-sm text-slate-500 mb-1">SSE</div>
+      <div class="flex items-center gap-2">
+        <div id="sseDot" class="w-2 h-2 rounded-full bg-slate-300"></div>
+        <span class="text-sm font-medium" id="sseStatus">Connecting...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Specs — always visible, side by side -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    <!-- Swagger / OpenAPI -->
+    <div class="spec-panel bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span class="text-sm font-semibold text-slate-700">Swagger (OpenAPI)</span>
+          <span class="text-xs text-slate-400 font-mono">YAML</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="copyPanel('swaggerContent', this)" class="text-xs text-slate-400 hover:text-slate-600 transition">Copy</button>
+          <a href="/openapi.yaml" target="_blank" class="text-xs text-slate-400 hover:text-slate-600 transition">Raw</a>
+        </div>
+      </div>
+      <!-- Loading skeleton -->
+      <div id="swaggerLoading" class="p-5 space-y-2">
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-5/6"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-2/3"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-4/5"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/3"></div>
+      </div>
+      <!-- Content -->
+      <pre id="swaggerPre" class="hidden overflow-auto flex-1" style="max-height: 420px"><code id="swaggerContent" class="block p-4 text-xs leading-relaxed font-mono"></code></pre>
+      <div id="swaggerError" class="hidden p-4 text-sm text-red-500"></div>
+    </div>
+
+    <!-- WSDL -->
+    <div class="spec-panel bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <span class="text-sm font-semibold text-slate-700">WSDL</span>
+          <span class="text-xs text-slate-400 font-mono">XML</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="copyPanel('wsdlContent', this)" class="text-xs text-slate-400 hover:text-slate-600 transition">Copy</button>
+          <a href="/soap?wsdl" target="_blank" class="text-xs text-slate-400 hover:text-slate-600 transition">Raw</a>
+        </div>
+      </div>
+      <!-- Loading skeleton -->
+      <div id="wsdlLoading" class="p-5 space-y-2">
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-2/3"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-5/6"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/3"></div>
+        <div class="h-3 bg-slate-100 rounded animate-pulse w-4/5"></div>
+      </div>
+      <!-- Content -->
+      <pre id="wsdlPre" class="hidden overflow-auto flex-1" style="max-height: 420px"><code id="wsdlContent" class="block p-4 text-xs leading-relaxed font-mono"></code></pre>
+      <div id="wsdlError" class="hidden p-4 text-sm text-red-500"></div>
+    </div>
+
+  </div>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+      <h2 class="text-sm font-semibold text-slate-600 mb-3">By Method</h2>
+      <div id="methodStats" class="space-y-2"></div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+      <h2 class="text-sm font-semibold text-slate-600 mb-3">By Status Code</h2>
+      <div id="statusStats" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Top Endpoints -->
+  <div class="bg-white rounded-lg border border-slate-200 p-4">
+    <h2 class="text-sm font-semibold text-slate-600 mb-3">Top Endpoints</h2>
+    <div id="pathStats" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2"></div>
+  </div>
+
+  <!-- Live Log -->
+  <div class="bg-white rounded-lg border border-slate-200">
+    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-600">Live Request Log</h2>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-400" id="logCount">0 entries</span>
+        <button onclick="clearLog()" class="text-xs text-slate-400 hover:text-slate-600 transition">Clear</button>
+      </div>
+    </div>
+    <div class="overflow-auto max-h-[480px]">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 sticky top-0">
+          <tr>
+            <th class="text-left px-4 py-2 text-slate-500 font-medium w-44">Time</th>
+            <th class="text-left px-4 py-2 text-slate-500 font-medium w-20">Method</th>
+            <th class="text-left px-4 py-2 text-slate-500 font-medium">Path</th>
+            <th class="text-right px-4 py-2 text-slate-500 font-medium w-20">Status</th>
+            <th class="text-right px-4 py-2 text-slate-500 font-medium w-20">ms</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const logBody = document.getElementById('logBody');
+let logCount = 0;
+
+// --- Spec panels — auto-load on page open ---
+async function loadSpec(url, loadingId, preId, contentId, errorId, lang) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let text = await res.text();
+
+    // Pretty-print JSON
+    if (lang === 'json') {
+      try { text = JSON.stringify(JSON.parse(text), null, 2); } catch {}
+    }
+
+    const codeEl = document.getElementById(contentId);
+    codeEl.textContent = text;
+    codeEl.removeAttribute('data-highlighted');
+    // Set explicit language class so highlight.js picks it up correctly
+    codeEl.className = `block p-4 text-xs leading-relaxed font-mono language-${lang}`;
+    hljs.highlightElement(codeEl);
+
+    document.getElementById(loadingId).classList.add('hidden');
+    document.getElementById(preId).classList.remove('hidden');
+  } catch (err) {
+    document.getElementById(loadingId).classList.add('hidden');
+    const errEl = document.getElementById(errorId);
+    errEl.textContent = `Nepodařilo se načíst (${err.message}). `;
+    const retry = document.createElement('button');
+    retry.className = 'underline';
+    retry.textContent = 'Zkusit znovu';
+    retry.onclick = () => {
+      errEl.classList.add('hidden');
+      document.getElementById(loadingId).classList.remove('hidden');
+      loadSpec(url, loadingId, preId, contentId, errorId, lang);
+    };
+    errEl.appendChild(retry);
+    errEl.classList.remove('hidden');
+  }
+}
+
+function copyPanel(contentId, btn) {
+  const text = document.getElementById(contentId).textContent;
+  navigator.clipboard.writeText(text);
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = orig, 1500);
+}
+
+// --- SSE ---
+function connectSSE() {
+  const es = new EventSource('/dashboard/events');
+  es.onopen = () => {
+    document.getElementById('sseDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
+    document.getElementById('sseStatus').textContent = 'Connected';
+  };
+  es.onmessage = (e) => addLogRow(JSON.parse(e.data));
+  es.onerror = () => {
+    document.getElementById('sseDot').className = 'w-2 h-2 rounded-full bg-red-400';
+    document.getElementById('sseStatus').textContent = 'Reconnecting...';
+    es.close();
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+function addLogRow(entry) {
+  const tr = document.createElement('tr');
+  tr.className = 'log-row border-t border-slate-100';
+  const statusColor = entry.status < 300 ? 'text-emerald-600' : entry.status < 400 ? 'text-blue-600' : entry.status < 500 ? 'text-amber-600' : 'text-red-600';
+  const methodColors = { GET: 'bg-blue-100 text-blue-700', POST: 'bg-green-100 text-green-700', PATCH: 'bg-amber-100 text-amber-700', DELETE: 'bg-red-100 text-red-700', PUT: 'bg-purple-100 text-purple-700' };
+  const mc = methodColors[entry.method] || 'bg-slate-100 text-slate-700';
+  const time = new Date(entry.timestamp).toLocaleTimeString('cs-CZ', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  tr.innerHTML = `
+    <td class="px-4 py-1.5 text-slate-400 font-mono text-xs">${time}</td>
+    <td class="px-4 py-1.5"><span class="px-1.5 py-0.5 rounded text-xs font-semibold ${mc}">${entry.method}</span></td>
+    <td class="px-4 py-1.5 font-mono text-xs truncate max-w-xs" title="${entry.path}">${entry.path}</td>
+    <td class="px-4 py-1.5 text-right font-mono text-xs font-semibold ${statusColor}">${entry.status}</td>
+    <td class="px-4 py-1.5 text-right font-mono text-xs text-slate-400">${entry.duration}</td>
+  `;
+  logBody.prepend(tr);
+  logCount++;
+  if (logBody.children.length > 200) logBody.lastChild.remove();
+  document.getElementById('logCount').textContent = `${Math.min(logCount, 200)} entries`;
+}
+
+function clearLog() {
+  logBody.innerHTML = '';
+  logCount = 0;
+  document.getElementById('logCount').textContent = '0 entries';
+}
+
+// --- Stats polling ---
+async function fetchStats() {
+  try {
+    const res = await fetch('/dashboard/api/stats');
+    const data = await res.json();
+    const mins = Math.floor(data.uptime / 60);
+    const secs = data.uptime % 60;
+    document.getElementById('uptime').textContent = `${mins}m ${secs}s`;
+    document.getElementById('memory').textContent = `${data.memory.rss} MB`;
+    document.getElementById('totalRequests').textContent = data.requests.totalRequests;
+    document.getElementById('interviews').textContent = data.data.interviews;
+    document.getElementById('candidates').textContent = data.data.candidates;
+    renderBarStats('methodStats', data.requests.byMethod, data.requests.totalRequests);
+    renderBarStats('statusStats', data.requests.byStatus, data.requests.totalRequests);
+    renderPathStats(data.requests.byPath, data.requests.totalRequests);
+    document.getElementById('statusDot').className = 'w-3 h-3 rounded-full bg-emerald-500 animate-pulse';
+  } catch {
+    document.getElementById('statusDot').className = 'w-3 h-3 rounded-full bg-red-500';
+  }
+}
+
+function renderBarStats(containerId, obj, total) {
+  const el = document.getElementById(containerId);
+  if (!total) { el.innerHTML = '<span class="text-xs text-slate-400">No data yet</span>'; return; }
+  const sorted = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+  el.innerHTML = sorted.map(([key, count]) => {
+    const pct = Math.round((count / total) * 100);
+    const statusColor = key >= 200 && key < 300 ? 'bg-emerald-400' : key >= 300 && key < 400 ? 'bg-blue-400' : key >= 400 && key < 500 ? 'bg-amber-400' : key >= 500 ? 'bg-red-400' : 'bg-slate-400';
+    const barColor = containerId === 'statusStats' ? statusColor : 'bg-slate-400';
+    return `<div class="flex items-center gap-3">
+      <span class="text-xs font-mono w-16 text-right text-slate-600">${key}</span>
+      <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="${barColor} h-full rounded-full" style="width:${Math.max(pct, 2)}%"></div></div>
+      <span class="text-xs text-slate-400 w-14 text-right">${count} (${pct}%)</span>
+    </div>`;
+  }).join('');
+}
+
+function renderPathStats(obj, total) {
+  const el = document.getElementById('pathStats');
+  if (!total) { el.innerHTML = '<span class="text-xs text-slate-400">No data yet</span>'; return; }
+  const sorted = Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  el.innerHTML = sorted.map(([key, count]) => `<div class="flex items-center justify-between py-1">
+    <span class="text-xs font-mono text-slate-600 truncate">${key}</span>
+    <span class="text-xs font-semibold text-slate-500 ml-2">${count}</span>
+  </div>`).join('');
+}
+
+// --- Reset ---
+async function resetData() {
+  if (!confirm('Reset all data and stats to defaults?')) return;
+  await fetch('/dashboard/api/reset', { method: 'POST' });
+  clearLog();
+  fetchStats();
+}
+
+// --- Init ---
+loadSpec('/openapi.yaml',  'swaggerLoading', 'swaggerPre', 'swaggerContent', 'swaggerError', 'yaml');
+loadSpec('/soap?wsdl',     'wsdlLoading',    'wsdlPre',    'wsdlContent',    'wsdlError',    'xml');
+connectSSE();
+fetchStats();
+setInterval(fetchStats, 5000);
+</script>
+</body>
+</html>

@@ -331,3 +331,55 @@ describe('Cross-protocol: shared state', () => {
     assert.equal(body.interview.position, 'Cross-Protocol');
   });
 });
+
+// --- Dashboard ---
+
+describe('Dashboard', () => {
+  test('serves HTML without auth', async () => {
+    const res = await fetch(`${baseUrl}/dashboard`);
+    assert.equal(res.status, 200);
+    const text = await res.text();
+    assert.match(text, /Interview Mock/);
+    assert.match(text, /<html/);
+  });
+
+  test('stats API returns uptime and counters', async () => {
+    const res = await fetch(`${baseUrl}/dashboard/api/stats`);
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(typeof body.uptime, 'number');
+    assert.equal(typeof body.memory.rss, 'number');
+    assert.equal(typeof body.data.interviews, 'number');
+    assert.equal(typeof body.requests.totalRequests, 'number');
+  });
+
+  test('SSE endpoint returns event-stream headers', async () => {
+    const controller = new AbortController();
+    const res = await fetch(`${baseUrl}/dashboard/events`, { signal: controller.signal });
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type'), /text\/event-stream/);
+    controller.abort();
+  });
+
+  test('reset endpoint restores default data', async () => {
+    // Create an interview first
+    await fetch(`${baseUrl}/rest/interviews`, {
+      method: 'POST',
+      headers: { ...BEARER, 'content-type': 'application/json' },
+      body: JSON.stringify({ candidateId: 'CAND-001' })
+    });
+    const before = await (await fetch(`${baseUrl}/dashboard/api/stats`)).json();
+    assert.ok(before.data.interviews > 2);
+
+    // Reset
+    const res = await fetch(`${baseUrl}/dashboard/api/reset`, { method: 'POST' });
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.status, 'ok');
+
+    // Verify data is back to defaults
+    const after = await (await fetch(`${baseUrl}/dashboard/api/stats`)).json();
+    assert.equal(after.data.interviews, 2);
+    assert.equal(after.requests.totalRequests, 0);
+  });
+});

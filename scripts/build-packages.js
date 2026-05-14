@@ -36,6 +36,8 @@ function copyCommonFiles(targetDir) {
     path.join(root, 'postman', 'interview-mock.postman_collection.json'),
     path.join(targetDir, 'postman', 'interview-mock.postman_collection.json')
   );
+  fs.mkdirSync(path.join(targetDir, 'dashboard'), { recursive: true });
+  fs.copyFileSync(path.join(root, 'dashboard', 'index.html'), path.join(targetDir, 'dashboard', 'index.html'));
 }
 
 function createArchive(sourceDir, archivePath) {

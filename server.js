@@ -18,10 +18,13 @@ const WS_SECURITY_USER = 'ceps-integration';
 const WS_SECURITY_PASS = 'K7x!mQ9pL2wZ';
 
 const PUBLIC_PATHS = new Set(['/', '/health', '/openapi.yaml', '/rest']);
+const LOG_BUFFER_SIZE = 200;
+const startedAt = Date.now();
 
 function requireBearerAuth(req, res, next) {
   if (PUBLIC_PATHS.has(req.path)) return next();
   if (req.path === '/soap') return next(); // SOAP has its own auth via WS-Security
+  if (req.path.startsWith('/dashboard')) return next();
 
   const authHeader = req.get('authorization');
   if (!authHeader) {
@@ -200,6 +203,11 @@ function createApp() {
     trimValues: true
   });
 
+  // Dashboard: request log ring buffer, stats, SSE clients
+  const logBuffer = [];
+  const sseClients = new Set();
+  const stats = { totalRequests: 0, byMethod: {}, byStatus: {}, byPath: {} };
+
   app.disable('x-powered-by');
   app.use(cors());
   app.use('/soap', express.text({
@@ -207,6 +215,34 @@ function createApp() {
     limit: '1mb'
   }));
   app.use(express.json({ limit: '1mb' }));
+
+  // Logging middleware — before auth so we capture 401s too
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/dashboard')) return next();
+    const start = Date.now();
+    res.on('finish', () => {
+      const entry = {
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        path: req.path,
+        route: req.route?.path || req.path,
+        status: res.statusCode,
+        duration: Date.now() - start
+      };
+      logBuffer.push(entry);
+      if (logBuffer.length > LOG_BUFFER_SIZE) logBuffer.shift();
+      stats.totalRequests++;
+      stats.byMethod[req.method] = (stats.byMethod[req.method] || 0) + 1;
+      stats.byStatus[res.statusCode] = (stats.byStatus[res.statusCode] || 0) + 1;
+      const routeKey = `${req.method} ${entry.route}`;
+      stats.byPath[routeKey] = (stats.byPath[routeKey] || 0) + 1;
+      for (const client of sseClients) {
+        client.write(`data: ${JSON.stringify(entry)}\n\n`);
+      }
+    });
+    next();
+  });
+
   app.use(requireBearerAuth);
 
   app.get('/', (req, res) => {
@@ -475,6 +511,50 @@ function createApp() {
 
     return res.status(400).type('application/xml').send(soapFault(`Unsupported SOAP operation: ${operationName || 'unknown'}`));
   });
+
+  // --- Dashboard ---
+
+  app.get('/dashboard', (_req, res) => {
+    res.type('text/html').send(fs.readFileSync(path.join(__dirname, 'dashboard', 'index.html'), 'utf8'));
+  });
+
+  app.get('/dashboard/events', (req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive'
+    });
+    // Replay buffer
+    for (const entry of logBuffer) {
+      res.write(`data: ${JSON.stringify(entry)}\n\n`);
+    }
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+  });
+
+  app.get('/dashboard/api/stats', (_req, res) => {
+    const mem = process.memoryUsage();
+    res.json({
+      uptime: Math.floor((Date.now() - startedAt) / 1000),
+      memory: { rss: Math.round(mem.rss / 1048576), heap: Math.round(mem.heapUsed / 1048576) },
+      data: { interviews: state.interviews.length, candidates: state.candidates.length },
+      requests: stats
+    });
+  });
+
+  app.post('/dashboard/api/reset', (_req, res) => {
+    const fresh = loadMockData();
+    state.interviews = fresh.interviews;
+    state.candidates = fresh.candidates;
+    stats.totalRequests = 0;
+    stats.byMethod = {};
+    stats.byStatus = {};
+    stats.byPath = {};
+    logBuffer.length = 0;
+    res.json({ status: 'ok', message: 'Data and stats reset to defaults.' });
+  });
+
+  // --- Error handlers ---
 
   app.use((req, res) => {
     res.status(404).json({
