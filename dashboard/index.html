@@ -15,7 +15,9 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   #logBody tr:nth-child(even) { background: rgb(248 250 252); }
   .hljs { background: transparent !important; padding: 0 !important; }
-  .spec-panel pre { margin: 0; }
+  .svc-row { cursor: pointer; transition: all 0.15s; }
+  .svc-row:hover { background: rgb(248 250 252); }
+  .svc-row.active { background: rgb(239 246 255); border-left: 3px solid rgb(59 130 246); }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
@@ -29,8 +31,6 @@
   <div class="flex items-center gap-4">
     <span class="text-sm text-slate-500">Uptime: <strong id="uptime">—</strong></span>
     <span class="text-sm text-slate-500">RAM: <strong id="memory">—</strong></span>
-    <a href="/health" target="_blank" class="text-sm text-slate-400 hover:text-slate-600 transition">Health</a>
-    <a href="/" target="_blank" class="text-sm text-slate-400 hover:text-slate-600 transition">Service Info</a>
     <button onclick="resetData()" class="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition font-medium">Reset Data</button>
   </div>
 </header>
@@ -60,63 +60,152 @@
     </div>
   </div>
 
-  <!-- API Specs — always visible, side by side -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <!-- Services: Master-Detail -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-    <!-- Swagger / OpenAPI -->
-    <div class="spec-panel bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col">
-      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span class="text-sm font-semibold text-slate-700">Swagger (OpenAPI)</span>
-          <span class="text-xs text-slate-400 font-mono">YAML</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <button onclick="copyPanel('swaggerContent', this)" class="text-xs text-slate-400 hover:text-slate-600 transition">Copy</button>
-          <a href="/openapi.yaml" target="_blank" class="text-xs text-slate-400 hover:text-slate-600 transition">Raw</a>
-        </div>
+    <!-- Service List (master) -->
+    <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-sm font-semibold text-slate-600">Services</h2>
       </div>
-      <!-- Loading skeleton -->
-      <div id="swaggerLoading" class="p-5 space-y-2">
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-5/6"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-2/3"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-4/5"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/3"></div>
+
+      <div id="svcRow-rest" class="svc-row px-4 py-4 border-b border-slate-100" onclick="showService('rest')">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="font-semibold text-slate-800 text-sm">REST API</span>
+          </div>
+          <span class="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded font-mono">Bearer</span>
+        </div>
+        <p class="text-xs text-slate-500 ml-[18px]">Interviews & Candidates — JSON over HTTP</p>
+        <p class="text-xs text-slate-400 ml-[18px] mt-1 font-mono">/rest/*</p>
       </div>
-      <!-- Content -->
-      <pre id="swaggerPre" class="hidden overflow-auto flex-1" style="max-height: 420px"><code id="swaggerContent" class="block p-4 text-xs leading-relaxed font-mono"></code></pre>
-      <div id="swaggerError" class="hidden p-4 text-sm text-red-500"></div>
+
+      <div id="svcRow-soap" class="svc-row px-4 py-4" onclick="showService('soap')">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+            <span class="font-semibold text-slate-800 text-sm">SOAP Service</span>
+          </div>
+          <span class="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">WS-Security</span>
+        </div>
+        <p class="text-xs text-slate-500 ml-[18px]">Interviews — XML over SOAP</p>
+        <p class="text-xs text-slate-400 ml-[18px] mt-1 font-mono">/soap</p>
+      </div>
     </div>
 
-    <!-- WSDL -->
-    <div class="spec-panel bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col">
-      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-          <span class="text-sm font-semibold text-slate-700">WSDL</span>
-          <span class="text-xs text-slate-400 font-mono">XML</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <button onclick="copyPanel('wsdlContent', this)" class="text-xs text-slate-400 hover:text-slate-600 transition">Copy</button>
-          <a href="/soap?wsdl" target="_blank" class="text-xs text-slate-400 hover:text-slate-600 transition">Raw</a>
-        </div>
-      </div>
-      <!-- Loading skeleton -->
-      <div id="wsdlLoading" class="p-5 space-y-2">
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-2/3"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-5/6"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-1/3"></div>
-        <div class="h-3 bg-slate-100 rounded animate-pulse w-4/5"></div>
-      </div>
-      <!-- Content -->
-      <pre id="wsdlPre" class="hidden overflow-auto flex-1" style="max-height: 420px"><code id="wsdlContent" class="block p-4 text-xs leading-relaxed font-mono"></code></pre>
-      <div id="wsdlError" class="hidden p-4 text-sm text-red-500"></div>
-    </div>
+    <!-- Service Detail (detail) -->
+    <div class="lg:col-span-2 space-y-4" id="detailPanel">
 
+      <!-- Placeholder -->
+      <div id="detailPlaceholder" class="bg-white rounded-lg border border-slate-200 p-12 text-center">
+        <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <p class="text-sm text-slate-400">Klikni na službu vlevo pro zobrazení detailu</p>
+      </div>
+
+      <!-- REST Detail -->
+      <div id="detail-rest" class="hidden space-y-4">
+        <!-- Auth info -->
+        <div class="bg-white rounded-lg border border-slate-200 p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <h3 class="text-sm font-semibold text-slate-700">REST API — Autentizace</h3>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+            <p class="text-xs text-emerald-800 font-semibold mb-1">Bearer Token</p>
+            <code class="text-xs text-emerald-700 font-mono break-all select-all">Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.CEPS-HUB-INTERVIEW-2026</code>
+          </div>
+          <div class="mt-3 text-xs text-slate-500 space-y-1">
+            <p><strong>Endpointy:</strong> <code class="bg-slate-100 px-1 rounded">/rest/interviews</code>, <code class="bg-slate-100 px-1 rounded">/rest/candidates</code></p>
+            <p><strong>Metody:</strong> GET, POST, PATCH</p>
+            <p><strong>Content-Type:</strong> <code class="bg-slate-100 px-1 rounded">application/json</code></p>
+          </div>
+        </div>
+        <!-- Swagger -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-700">Swagger (OpenAPI)</span>
+            <div class="flex items-center gap-3">
+              <button onclick="copyPanel('restSpecContent', this)" class="text-xs text-slate-400 hover:text-slate-600 transition">Copy</button>
+              <a href="/openapi.yaml" target="_blank" class="text-xs text-slate-400 hover:text-slate-600 transition">Raw</a>
+            </div>
+          </div>
+          <div id="restSpecLoading" class="p-5 space-y-2">
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div>
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div>
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-5/6"></div>
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-2/3"></div>
+          </div>
+          <pre id="restSpecPre" class="hidden overflow-auto" style="max-height: 500px"><code id="restSpecContent" class="block p-4 text-xs leading-relaxed font-mono"></code></pre>
+        </div>
+      </div>
+
+      <!-- SOAP Detail -->
+      <div id="detail-soap" class="hidden space-y-4">
+        <!-- Auth info -->
+        <div class="bg-white rounded-lg border border-slate-200 p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+            <h3 class="text-sm font-semibold text-slate-700">SOAP Service — Autentizace</h3>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p class="text-xs text-blue-800 font-semibold mb-1">WS-Security UsernameToken</p>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <span class="text-xs text-blue-600">Username:</span>
+                <code class="text-xs text-blue-700 font-mono ml-1 select-all">ceps-integration</code>
+              </div>
+              <div>
+                <span class="text-xs text-blue-600">Password:</span>
+                <code class="text-xs text-blue-700 font-mono ml-1 select-all">K7x!mQ9pL2wZ</code>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-slate-500 space-y-1">
+            <p><strong>Endpoint:</strong> <code class="bg-slate-100 px-1 rounded">POST /soap</code></p>
+            <p><strong>Content-Type:</strong> <code class="bg-slate-100 px-1 rounded">text/xml; charset=utf-8</code></p>
+            <p><strong>Operace:</strong> ListInterviews, GetInterview, CreateInterview, UpdateInterviewStatus</p>
+          </div>
+        </div>
+        <!-- WSDL -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-700">WSDL</span>
+            <div class="flex items-center gap-3">
+              <button onclick="copyPanel('soapSpecContent', this)" class="text-xs text-slate-400 hover:text-slate-600 transition">Copy</button>
+              <a href="/soap?wsdl" target="_blank" class="text-xs text-slate-400 hover:text-slate-600 transition">Raw</a>
+            </div>
+          </div>
+          <div id="soapSpecLoading" class="p-5 space-y-2">
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-2/3"></div>
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-5/6"></div>
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div>
+            <div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div>
+          </div>
+          <pre id="soapSpecPre" class="hidden overflow-auto" style="max-height: 500px"><code id="soapSpecContent" class="block p-4 text-xs leading-relaxed font-mono"></code></pre>
+        </div>
+        <!-- SOAP Example -->
+        <div class="bg-white rounded-lg border border-slate-200 p-4">
+          <h3 class="text-sm font-semibold text-slate-700 mb-2">Příklad SOAP Envelope</h3>
+          <pre class="bg-slate-50 rounded-lg p-3 overflow-auto text-xs font-mono text-slate-600 leading-relaxed">&lt;soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:tns="urn:interview-mock"
+               xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"&gt;
+  &lt;soap:Header&gt;
+    &lt;wsse:Security&gt;
+      &lt;wsse:UsernameToken&gt;
+        &lt;wsse:Username&gt;ceps-integration&lt;/wsse:Username&gt;
+        &lt;wsse:Password&gt;K7x!mQ9pL2wZ&lt;/wsse:Password&gt;
+      &lt;/wsse:UsernameToken&gt;
+    &lt;/wsse:Security&gt;
+  &lt;/soap:Header&gt;
+  &lt;soap:Body&gt;
+    &lt;tns:ListInterviewsRequest/&gt;
+  &lt;/soap:Body&gt;
+&lt;/soap:Envelope&gt;</pre>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- Stats Row -->
@@ -167,48 +256,52 @@
 <script>
 const logBody = document.getElementById('logBody');
 let logCount = 0;
+let activeService = null;
+const specLoaded = { rest: false, soap: false };
 
-// --- Spec panels — auto-load on page open ---
-async function loadSpec(url, loadingId, preId, contentId, errorId, lang) {
+// --- Service Master-Detail ---
+function showService(svc) {
+  // Toggle active row
+  document.querySelectorAll('.svc-row').forEach(r => r.classList.remove('active'));
+  document.getElementById(`svcRow-${svc}`).classList.add('active');
+
+  // Show detail
+  document.getElementById('detailPlaceholder').classList.add('hidden');
+  document.getElementById('detail-rest').classList.toggle('hidden', svc !== 'rest');
+  document.getElementById('detail-soap').classList.toggle('hidden', svc !== 'soap');
+
+  // Lazy-load spec on first click
+  if (svc === 'rest' && !specLoaded.rest) {
+    loadSpec('/openapi.yaml', 'restSpecLoading', 'restSpecPre', 'restSpecContent', 'yaml');
+    specLoaded.rest = true;
+  }
+  if (svc === 'soap' && !specLoaded.soap) {
+    loadSpec('/soap?wsdl', 'soapSpecLoading', 'soapSpecPre', 'soapSpecContent', 'xml');
+    specLoaded.soap = true;
+  }
+
+  activeService = svc;
+}
+
+async function loadSpec(url, loadingId, preId, contentId, lang) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let text = await res.text();
-
-    // Pretty-print JSON
-    if (lang === 'json') {
-      try { text = JSON.stringify(JSON.parse(text), null, 2); } catch {}
-    }
-
+    const text = await res.text();
     const codeEl = document.getElementById(contentId);
     codeEl.textContent = text;
-    codeEl.removeAttribute('data-highlighted');
-    // Set explicit language class so highlight.js picks it up correctly
     codeEl.className = `block p-4 text-xs leading-relaxed font-mono language-${lang}`;
     hljs.highlightElement(codeEl);
-
     document.getElementById(loadingId).classList.add('hidden');
     document.getElementById(preId).classList.remove('hidden');
   } catch (err) {
-    document.getElementById(loadingId).classList.add('hidden');
-    const errEl = document.getElementById(errorId);
-    errEl.textContent = `Nepodařilo se načíst (${err.message}). `;
-    const retry = document.createElement('button');
-    retry.className = 'underline';
-    retry.textContent = 'Zkusit znovu';
-    retry.onclick = () => {
-      errEl.classList.add('hidden');
-      document.getElementById(loadingId).classList.remove('hidden');
-      loadSpec(url, loadingId, preId, contentId, errorId, lang);
-    };
-    errEl.appendChild(retry);
-    errEl.classList.remove('hidden');
+    document.getElementById(loadingId).innerHTML =
+      `<p class="text-sm text-red-500">Nepodařilo se načíst (${err.message})</p>`;
   }
 }
 
 function copyPanel(contentId, btn) {
-  const text = document.getElementById(contentId).textContent;
-  navigator.clipboard.writeText(text);
+  navigator.clipboard.writeText(document.getElementById(contentId).textContent);
   const orig = btn.textContent;
   btn.textContent = 'Copied!';
   setTimeout(() => btn.textContent = orig, 1500);
@@ -312,8 +405,6 @@ async function resetData() {
 }
 
 // --- Init ---
-loadSpec('/openapi.yaml',  'swaggerLoading', 'swaggerPre', 'swaggerContent', 'swaggerError', 'yaml');
-loadSpec('/soap?wsdl',     'wsdlLoading',    'wsdlPre',    'wsdlContent',    'wsdlError',    'xml');
 connectSSE();
 fetchStats();
 setInterval(fetchStats, 5000);
