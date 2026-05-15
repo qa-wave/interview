@@ -52,5 +52,5 @@ jobs:
           else
             echo "::notice::Zadny Playwright config - preskakuji E2E."
           fi
-      - name: Build (HARD GATE)
-        run: npm run build
+      - name: Build (hard gate — skip if no build script)
+        run: npm run build --if-present
