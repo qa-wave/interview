@@ -1,0 +1,221 @@
+openapi: 3.1.0
+info:
+  title: Loans REST API
+  version: 1.0.0
+  description: REST API for creating, updating, and reviewing book loans.
+servers:
+  - url: http://localhost:4010
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Default token: BOOKS-REST-TOKEN-2026"
+  schemas:
+    LoanStatus:
+      type: string
+      enum: [REQUESTED, BORROWED, RETURNED, OVERDUE, CANCELLED, LOST]
+    Book:
+      type: object
+      properties:
+        id:
+          type: string
+        isbn:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        category:
+          type: string
+        available:
+          type: boolean
+    Loan:
+      type: object
+      required: [id, bookId, borrowerName, dueDate, status, rating, recommendation, book]
+      properties:
+        id:
+          type: string
+          example: LOAN-002
+        bookId:
+          type: string
+          example: BOOK-002
+        borrowerName:
+          type: string
+          example: QA Candidate
+        dueDate:
+          type: string
+          format: date
+          example: "2026-06-01"
+        status:
+          $ref: "#/components/schemas/LoanStatus"
+        rating:
+          type:
+            - number
+            - "null"
+          example: 5
+        recommendation:
+          type:
+            - string
+            - "null"
+          enum: [RECOMMENDED, NEUTRAL, NOT_RECOMMENDED, null]
+        book:
+          anyOf:
+            - $ref: "#/components/schemas/Book"
+            - type: "null"
+    CreateLoanRequest:
+      type: object
+      required: [bookId, borrowerName]
+      properties:
+        bookId:
+          type: string
+          example: BOOK-002
+        borrowerName:
+          type: string
+          example: QA Candidate
+        dueDate:
+          type: string
+          format: date
+          example: "2026-06-01"
+    UpdateLoanStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/LoanStatus"
+    ReviewLoanRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+          example: 5
+paths:
+  /rest/loans:
+    get:
+      summary: List loans
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/LoanStatus"
+        - in: query
+          name: bookId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of loans
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [loans]
+                properties:
+                  loans:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Loan"
+    post:
+      summary: Create loan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLoanRequest"
+      responses:
+        "201":
+          description: Loan was created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [loan]
+                properties:
+                  loan:
+                    $ref: "#/components/schemas/Loan"
+        "400":
+          description: Invalid request
+        "409":
+          description: Book is not available
+  /rest/loans/{id}:
+    get:
+      summary: Get loan detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Loan detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [loan]
+                properties:
+                  loan:
+                    $ref: "#/components/schemas/Loan"
+        "404":
+          description: Loan was not found
+  /rest/loans/{id}/status:
+    patch:
+      summary: Update loan status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLoanStatusRequest"
+      responses:
+        "200":
+          description: Loan status was updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [loan]
+                properties:
+                  loan:
+                    $ref: "#/components/schemas/Loan"
+        "409":
+          description: Invalid status transition
+  /rest/loans/{id}/review:
+    post:
+      summary: Review returned book loan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewLoanRequest"
+      responses:
+        "200":
+          description: Loan was reviewed and returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [loan]
+                properties:
+                  loan:
+                    $ref: "#/components/schemas/Loan"

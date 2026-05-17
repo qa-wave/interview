@@ -1,0 +1,39 @@
+{
+  "books": [
+    {
+      "id": "BOOK-001",
+      "isbn": "978-80-000-0001-1",
+      "title": "Zaklady integracniho testovani",
+      "author": "Jana Novakova",
+      "category": "Testing",
+      "available": true
+    },
+    {
+      "id": "BOOK-002",
+      "isbn": "978-80-000-0002-8",
+      "title": "SOAP a REST v praxi",
+      "author": "Petr Svoboda",
+      "category": "Integration",
+      "available": true
+    },
+    {
+      "id": "BOOK-003",
+      "isbn": "978-80-000-0003-5",
+      "title": "SQL pro testery",
+      "author": "Eva Dvorakova",
+      "category": "Database",
+      "available": false
+    }
+  ],
+  "loans": [
+    {
+      "id": "LOAN-001",
+      "bookId": "BOOK-003",
+      "borrowerName": "Test Reader",
+      "dueDate": "2026-05-31",
+      "status": "BORROWED",
+      "rating": null,
+      "recommendation": null
+    }
+  ]
+}

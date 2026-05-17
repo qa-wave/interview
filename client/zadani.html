@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prakticky test - Books Mock</title>
+  <style>
+    body { margin: 32px; font-family: Arial, sans-serif; line-height: 1.5; color: #17202a; background: #f6f7f9; }
+    main { max-width: 920px; margin: 0 auto; }
+    section { padding: 20px; margin: 16px 0; border: 1px solid #d9dee7; border-radius: 8px; background: #fff; }
+    code, pre { font-family: Consolas, "Courier New", monospace; }
+    pre { padding: 12px; overflow: auto; background: #f1f4f8; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #d9dee7; text-align: left; }
+    th { background: #f1f4f8; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Prakticky test: integracni tester</h1>
+  <p>Casovy limit prakticke casti je 60 minut.</p>
+
+  <section>
+    <h2>Cil</h2>
+    <p>Pred sebou mas mock knihovniho systemu. Cast je dostupna pres REST, cast pres SOAP. Tvym ukolem je projit flow od nalezeni knihy az po overeni stavu vypujcky pres druhy protokol.</p>
+  </section>
+
+  <section>
+    <h2>Pristupy</h2>
+    <table>
+      <tr><th>REST</th><td><code>Authorization: Bearer BOOKS-REST-TOKEN-2026</code></td></tr>
+      <tr><th>SOAP username</th><td><code>books-user</code></td></tr>
+      <tr><th>SOAP password</th><td><code>Books!2026</code></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Ulohy</h2>
+    <ol>
+      <li>Otevri Swagger a WSDL, over REST bez tokenu a s tokenem.</li>
+      <li>Najdi knihu podle ISBN <code>978-80-000-0002-8</code> a uloz <code>bookId</code>.</li>
+      <li>Vytvor vypujcku pres <code>POST /rest/loans</code>, uloz <code>loanId</code> a zmen status na <code>BORROWED</code>.</li>
+      <li>Pres SOAP <code>GetLoan</code> over stejny stav, pote vypujcku ohodnot ratingem <code>5</code> a druhym protokolem over <code>RETURNED</code> a <code>RECOMMENDED</code>.</li>
+      <li>V SQL databazi <code>sql/books.db</code> vypis dostupne knihy v kategorii <code>Integration</code> a pocty vypujcek podle statusu.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Zaverecna diskuze</h2>
+    <p>Popis, co jsi overil/a v REST, co v SOAP, jak se lisi Bearer token a WS-Security UsernameToken a co bys automatizoval/a.</p>
+  </section>
+</main>
+</body>
+</html>

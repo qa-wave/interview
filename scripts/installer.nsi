@@ -1,160 +1,84 @@
-; Interview Mock - Windows Installer
-; Built with NSIS (Nullsoft Scriptable Install System)
-
+; Books Mock - Windows Installer
 !include "MUI2.nsh"
-!include "FileFunc.nsh"
 
-; ---------------------------------------------------------------------------
-; Configuration
-; ---------------------------------------------------------------------------
-
-!define PRODUCT_NAME "Interview Mock"
-!define PRODUCT_PUBLISHER "Interview Mock"
-!define PRODUCT_EXE "interview-mock.exe"
-!define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_EXE}"
+!define PRODUCT_NAME "Books Mock"
+!define PRODUCT_EXE "books-mock.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
-!define DEFAULT_PORT "4010"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "${OUT_FILE}"
-InstallDir "$PROGRAMFILES\InterviewMock"
-InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
+InstallDir "$PROGRAMFILES\BooksMock"
 ShowInstDetails show
-ShowUnInstDetails show
 RequestExecutionLevel admin
 
-; ---------------------------------------------------------------------------
-; Modern UI Settings
-; ---------------------------------------------------------------------------
-
 !define MUI_ABORTWARNING
-!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
-!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
-
-; Welcome page
-!define MUI_WELCOMEPAGE_TITLE "Interview Mock Service"
-!define MUI_WELCOMEPAGE_TEXT "This wizard will install the Interview Mock service on your computer.$\r$\n$\r$\nThe service provides REST and SOAP APIs for integration tester interviews.$\r$\n$\r$\nDefault port: ${DEFAULT_PORT}"
-
-; ---------------------------------------------------------------------------
-; Pages
-; ---------------------------------------------------------------------------
+!define MUI_WELCOMEPAGE_TITLE "Books Mock"
+!define MUI_WELCOMEPAGE_TEXT "Instalace mock sluzeb pro prakticky test integracniho testera.$\r$\n$\r$\nPo instalaci najdete na plose odkazy na server, sluzby, klientskou cast a SQL."
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
-
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
-
 !insertmacro MUI_LANGUAGE "English"
 
-; ---------------------------------------------------------------------------
-; Install Section
-; ---------------------------------------------------------------------------
-
-Section "Install" SecInstall
+Section "Install"
   SetOutPath "$INSTDIR"
-
-  ; Main executable
-  File "${SOURCE_DIR}\interview-mock.exe"
+  File "${SOURCE_DIR}\books-mock.exe"
   File "${SOURCE_DIR}\start-windows.cmd"
-  File "${SOURCE_DIR}\openapi.yaml"
   File "${SOURCE_DIR}\README.md"
+  File "${SOURCE_DIR}\openapi.yaml"
 
-  ; Mock data
   SetOutPath "$INSTDIR\mocks"
-  File "${SOURCE_DIR}\mocks\interview.mock.json"
+  File "${SOURCE_DIR}\mocks\books.mock.json"
 
-  ; Docs
   SetOutPath "$INSTDIR\docs"
-  File "${SOURCE_DIR}\docs\test-requests.http"
-  File "${SOURCE_DIR}\docs\soap-create-interview.xml"
-  File "${SOURCE_DIR}\docs\soap-update-status.xml"
+  File "${SOURCE_DIR}\docs\openapi-books.yaml"
+  File "${SOURCE_DIR}\docs\openapi-loans.yaml"
 
-  ; Interview materials (PDF)
-  File /nonfatal "${DOCS_DIR}\interview-zadani.pdf"
-  File /nonfatal "${DOCS_DIR}\interview-hodnoceni.pdf"
+  SetOutPath "$INSTDIR\client"
+  File /nonfatal "${CLIENT_DIR}\sluzby.html"
+  File /nonfatal "${CLIENT_DIR}\zadani.html"
+  File /nonfatal "${CLIENT_DIR}\zadani.md"
 
-  ; Postman collection
-  SetOutPath "$INSTDIR\postman"
-  File "${SOURCE_DIR}\postman\interview-mock.postman_collection.json"
-
-  ; SoapUI project
-  SetOutPath "$INSTDIR\soapui"
-  File /nonfatal "${SOAPUI_DIR}\InterviewMock-soapui-project.xml"
-  File /nonfatal "${SOAPUI_DIR}\README.md"
-
-  ; SQL files
   SetOutPath "$INSTDIR\sql"
   File /nonfatal "${SQL_DIR}\schema.sql"
   File /nonfatal "${SQL_DIR}\seed.sql"
   File /nonfatal "${SQL_DIR}\examples.sql"
+  File /nonfatal "${SQL_DIR}\books.db"
   File /nonfatal "${SQL_DIR}\README.md"
-  File /nonfatal "${SQL_DIR}\build.sh"
 
-  ; Back to install dir
   SetOutPath "$INSTDIR"
+  File /nonfatal "${SETUP_SCRIPT}"
 
-  ; Create start menu shortcuts
+  CreateShortcut "$DESKTOP\Books Mock Server.lnk" "$INSTDIR\start-windows.cmd" "" "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$DESKTOP\Books Mock Services.lnk" "cmd.exe" '/c start http://localhost:4010/services' "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$DESKTOP\Books Mock Client.lnk" "$INSTDIR\client\sluzby.html"
+  CreateShortcut "$DESKTOP\Books SQL Folder.lnk" "$INSTDIR\sql"
+
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Interview Mock.lnk" "$INSTDIR\start-windows.cmd" "" "$INSTDIR\${PRODUCT_EXE}" 0
-  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Open Install Folder.lnk" "$INSTDIR"
+  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Books Mock Server.lnk" "$INSTDIR\start-windows.cmd" "" "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Books Mock Services.lnk" "cmd.exe" '/c start http://localhost:4010/services'
+  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Books Mock Client.lnk" "$INSTDIR\client\sluzby.html"
   CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk" "$INSTDIR\uninstall.exe"
 
-  ; Desktop shortcut
-  CreateShortcut "$DESKTOP\Interview Mock.lnk" "$INSTDIR\start-windows.cmd" "" "$INSTDIR\${PRODUCT_EXE}" 0
-
-  ; Write uninstaller
   WriteUninstaller "$INSTDIR\uninstall.exe"
-
-  ; Registry - App Paths
-  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\${PRODUCT_EXE}"
-
-  ; Registry - Add/Remove Programs
   WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninstall.exe"
-  WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegDWORD HKLM "${PRODUCT_UNINST_KEY}" "NoModify" 1
-  WriteRegDWORD HKLM "${PRODUCT_UNINST_KEY}" "NoRepair" 1
 
-  ; Calculate installed size
-  ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
-  IntFmt $0 "0x%08X" $0
-  WriteRegDWORD HKLM "${PRODUCT_UNINST_KEY}" "EstimatedSize" "$0"
-
-  ; Add firewall rule for the service
-  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="Interview Mock Service" dir=in action=allow program="$INSTDIR\${PRODUCT_EXE}" enable=yes profile=private'
+  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="Books Mock" dir=in action=allow program="$INSTDIR\${PRODUCT_EXE}" enable=yes profile=private'
 SectionEnd
 
-; ---------------------------------------------------------------------------
-; Uninstall Section
-; ---------------------------------------------------------------------------
-
 Section "Uninstall"
-  ; Remove firewall rule
-  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="Interview Mock Service"'
-
-  ; Remove shortcuts
-  Delete "$DESKTOP\Interview Mock.lnk"
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="Books Mock"'
+  Delete "$DESKTOP\Books Mock Server.lnk"
+  Delete "$DESKTOP\Books Mock Services.lnk"
+  Delete "$DESKTOP\Books Mock Client.lnk"
+  Delete "$DESKTOP\Books SQL Folder.lnk"
   RMDir /r "$SMPROGRAMS\${PRODUCT_NAME}"
-
-  ; Remove files
-  RMDir /r "$INSTDIR\mocks"
-  RMDir /r "$INSTDIR\docs"
-  RMDir /r "$INSTDIR\postman"
-  RMDir /r "$INSTDIR\soapui"
-  RMDir /r "$INSTDIR\sql"
-  Delete "$INSTDIR\interview-mock.exe"
-  Delete "$INSTDIR\start-windows.cmd"
-  Delete "$INSTDIR\openapi.yaml"
-  Delete "$INSTDIR\README.md"
-  Delete "$INSTDIR\uninstall.exe"
-  RMDir "$INSTDIR"
-
-  ; Remove registry keys
+  RMDir /r "$INSTDIR"
   DeleteRegKey HKLM "${PRODUCT_UNINST_KEY}"
-  DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
 SectionEnd

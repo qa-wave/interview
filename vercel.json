@@ -1,7 +1,7 @@
 {
   "functions": {
     "server.js": {
-      "includeFiles": "{mocks/interview.mock.json,dashboard/index.html,docs/openapi-candidates.yaml,docs/openapi-interviews.yaml}"
+      "includeFiles": "{server/mocks/books.mock.json,server/docs/openapi-books.yaml,server/docs/openapi-loans.yaml,client/sluzby.html,client/zadani.html}"
     }
   }
 }

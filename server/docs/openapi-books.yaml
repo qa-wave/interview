@@ -1,0 +1,92 @@
+openapi: 3.1.0
+info:
+  title: Books REST API
+  version: 1.0.0
+  description: REST API for searching books in the mock library system.
+servers:
+  - url: http://localhost:4010
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Default token: BOOKS-REST-TOKEN-2026"
+  schemas:
+    Book:
+      type: object
+      required: [id, isbn, title, author, category, available]
+      properties:
+        id:
+          type: string
+          example: BOOK-002
+        isbn:
+          type: string
+          example: 978-80-000-0002-8
+        title:
+          type: string
+          example: SOAP a REST v praxi
+        author:
+          type: string
+          example: Petr Svoboda
+        category:
+          type: string
+          example: Integration
+        available:
+          type: boolean
+          example: true
+paths:
+  /rest/books:
+    get:
+      summary: List books
+      parameters:
+        - in: query
+          name: isbn
+          schema:
+            type: string
+        - in: query
+          name: author
+          schema:
+            type: string
+        - in: query
+          name: available
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of books
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [books]
+                properties:
+                  books:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Book"
+        "401":
+          description: Missing or invalid Bearer token
+  /rest/books/{id}:
+    get:
+      summary: Get book detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Book detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [book]
+                properties:
+                  book:
+                    $ref: "#/components/schemas/Book"
+        "404":
+          description: Book was not found

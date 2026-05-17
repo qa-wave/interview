@@ -13,6 +13,10 @@ function run(command, args, options = {}) {
   execFileSync(command, args, {
     cwd: root,
     stdio: 'inherit',
+    env: {
+      ...process.env,
+      PKG_CACHE_PATH: path.join(distDir, 'pkg-cache')
+    },
     ...options
   });
 }
@@ -22,22 +26,17 @@ function resetDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function copyCommonFiles(targetDir) {
-  fs.mkdirSync(path.join(targetDir, 'docs'), { recursive: true });
-  fs.mkdirSync(path.join(targetDir, 'mocks'), { recursive: true });
-  fs.mkdirSync(path.join(targetDir, 'postman'), { recursive: true });
-  fs.copyFileSync(path.join(root, 'README.md'), path.join(targetDir, 'README.md'));
-  fs.copyFileSync(path.join(root, 'openapi.yaml'), path.join(targetDir, 'openapi.yaml'));
-  fs.copyFileSync(path.join(root, 'mocks', 'interview.mock.json'), path.join(targetDir, 'mocks', 'interview.mock.json'));
-  fs.copyFileSync(path.join(root, 'docs', 'test-requests.http'), path.join(targetDir, 'docs', 'test-requests.http'));
-  fs.copyFileSync(path.join(root, 'docs', 'soap-create-interview.xml'), path.join(targetDir, 'docs', 'soap-create-interview.xml'));
-  fs.copyFileSync(path.join(root, 'docs', 'soap-update-status.xml'), path.join(targetDir, 'docs', 'soap-update-status.xml'));
-  fs.copyFileSync(
-    path.join(root, 'postman', 'interview-mock.postman_collection.json'),
-    path.join(targetDir, 'postman', 'interview-mock.postman_collection.json')
-  );
-  fs.mkdirSync(path.join(targetDir, 'dashboard'), { recursive: true });
-  fs.copyFileSync(path.join(root, 'dashboard', 'index.html'), path.join(targetDir, 'dashboard', 'index.html'));
+function copyDir(sourceDir, targetDir) {
+  fs.mkdirSync(targetDir, { recursive: true });
+  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
+    const sourcePath = path.join(sourceDir, entry.name);
+    const targetPath = path.join(targetDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDir(sourcePath, targetPath);
+    } else {
+      fs.copyFileSync(sourcePath, targetPath);
+    }
+  }
 }
 
 function createArchive(sourceDir, archivePath) {
@@ -51,73 +50,75 @@ resetDir(packageDir);
 run(path.join(root, 'node_modules', '.bin', 'pkg'), [
   '.',
   '--targets',
-  'node20-macos-arm64,node20-macos-x64,node20-win-x64',
+  'node24-macos-arm64,node24-macos-x64,node24-win-x64',
   '--out-path',
   binDir
 ]);
 
-const packages = [
+const clientDir = path.join(packageDir, 'books-mock-client');
+copyDir(path.join(root, 'client'), clientDir);
+copyDir(path.join(root, 'sql'), path.join(clientDir, 'sql'));
+createArchive(clientDir, path.join(packageDir, 'books-mock-client.zip'));
+
+const serverPackages = [
   {
-    name: 'interview-mock-macos-arm64',
-    binary: 'interview-mock-macos-arm64',
+    name: 'books-mock-server-macos-arm64',
+    sourceBinary: 'books-mock-macos-arm64',
+    targetBinary: 'books-mock',
     startScript: 'start-macos.sh',
-    startContents: '#!/bin/sh\nDIR="$(cd "$(dirname "$0")" && pwd)"\nPORT="${PORT:-4010}" MOCK_DATA_PATH="${MOCK_DATA_PATH:-$DIR/mocks/interview.mock.json}" "$DIR/interview-mock" "$@"\n'
+    startContents: '#!/bin/sh\nDIR="$(cd "$(dirname "$0")" && pwd)"\nPORT="${PORT:-4010}" MOCK_DATA_PATH="${MOCK_DATA_PATH:-$DIR/mocks/books.mock.json}" "$DIR/books-mock" "$@"\n'
   },
   {
-    name: 'interview-mock-macos-x64',
-    binary: 'interview-mock-macos-x64',
+    name: 'books-mock-server-macos-x64',
+    sourceBinary: 'books-mock-macos-x64',
+    targetBinary: 'books-mock',
     startScript: 'start-macos.sh',
-    startContents: '#!/bin/sh\nDIR="$(cd "$(dirname "$0")" && pwd)"\nPORT="${PORT:-4010}" MOCK_DATA_PATH="${MOCK_DATA_PATH:-$DIR/mocks/interview.mock.json}" "$DIR/interview-mock" "$@"\n'
+    startContents: '#!/bin/sh\nDIR="$(cd "$(dirname "$0")" && pwd)"\nPORT="${PORT:-4010}" MOCK_DATA_PATH="${MOCK_DATA_PATH:-$DIR/mocks/books.mock.json}" "$DIR/books-mock" "$@"\n'
   },
   {
-    name: 'interview-mock-windows-x64',
-    binary: 'interview-mock-win-x64.exe',
+    name: 'books-mock-server-windows-x64',
+    sourceBinary: 'books-mock-win-x64.exe',
+    targetBinary: 'books-mock.exe',
     startScript: 'start-windows.cmd',
-    startContents: '@echo off\r\nset DIR=%~dp0\r\nif "%PORT%"=="" set PORT=4010\r\nif "%MOCK_DATA_PATH%"=="" set MOCK_DATA_PATH=%DIR%mocks\\interview.mock.json\r\n"%DIR%interview-mock.exe" %*\r\n'
+    startContents: '@echo off\r\nset DIR=%~dp0\r\nif "%PORT%"=="" set PORT=4010\r\nif "%MOCK_DATA_PATH%"=="" set MOCK_DATA_PATH=%DIR%mocks\\books.mock.json\r\nstart "" "http://localhost:4010/services"\r\n"%DIR%books-mock.exe" %*\r\n'
   }
 ];
 
-for (const item of packages) {
+for (const item of serverPackages) {
   const targetDir = path.join(packageDir, item.name);
   fs.mkdirSync(targetDir, { recursive: true });
-  copyCommonFiles(targetDir);
-
-  const binaryName = item.name.includes('windows') ? 'interview-mock.exe' : 'interview-mock';
-  fs.copyFileSync(path.join(binDir, item.binary), path.join(targetDir, binaryName));
-  fs.chmodSync(path.join(targetDir, binaryName), 0o755);
-
+  copyDir(path.join(root, 'server'), targetDir);
+  fs.copyFileSync(path.join(root, 'README.md'), path.join(targetDir, 'README.md'));
+  // openapi.yaml now lives in server/ and is copied by copyDir above.
+  fs.copyFileSync(path.join(binDir, item.sourceBinary), path.join(targetDir, item.targetBinary));
+  fs.chmodSync(path.join(targetDir, item.targetBinary), 0o755);
   fs.writeFileSync(path.join(targetDir, item.startScript), item.startContents);
   fs.chmodSync(path.join(targetDir, item.startScript), 0o755);
-
+  if (item.name.includes('windows')) {
+    fs.copyFileSync(path.join(root, 'scripts', 'setup-windows.bat'), path.join(targetDir, 'setup-windows.bat'));
+  }
   createArchive(targetDir, path.join(packageDir, `${item.name}.zip`));
 }
 
 console.log(`Packages created in ${packageDir}`);
 
-// Build Windows installer (NSIS)
 try {
   execSync('makensis -VERSION', { stdio: 'ignore' });
-
   const version = require(path.join(root, 'package.json')).version;
-  const nsiScript = path.join(root, 'scripts', 'installer.nsi');
-  const winSourceDir = path.join(packageDir, 'interview-mock-windows-x64');
-  const installerFile = path.join(packageDir, `interview-mock-${version}-setup.exe`);
-
-  const soapuiDir = path.join(root, 'soapui');
-  const sqlDir = path.join(root, 'sql');
-  const docsDir = path.join(root, 'docs');
+  const winSourceDir = path.join(packageDir, 'books-mock-server-windows-x64');
+  const installerFile = path.join(packageDir, `books-mock-${version}-setup.exe`);
 
   run('makensis', [
     `-DPRODUCT_VERSION=${version}`,
     `-DSOURCE_DIR=${winSourceDir}`,
-    `-DDOCS_DIR=${docsDir}`,
-    `-DSOAPUI_DIR=${soapuiDir}`,
-    `-DSQL_DIR=${sqlDir}`,
+    `-DCLIENT_DIR=${path.join(root, 'client')}`,
+    `-DSQL_DIR=${path.join(root, 'sql')}`,
+    `-DSETUP_SCRIPT=${path.join(root, 'scripts', 'setup-windows.bat')}`,
     `-DOUT_FILE=${installerFile}`,
-    nsiScript
+    path.join(root, 'scripts', 'installer.nsi')
   ]);
 
   console.log(`Windows installer created: ${installerFile}`);
 } catch {
-  console.log('Skipping Windows installer (makensis not found). Install NSIS: brew install nsis');
+  console.log('Skipping Windows installer (makensis not found).');
 }
