@@ -112,6 +112,23 @@ for (const drop of ['server.js', 'reseni.md', 'start-windows.cmd', 'setup-window
 }
 copyDir(path.join(root, 'client'), path.join(sendDir, 'client'));
 copyDir(path.join(root, 'sql'), path.join(sendDir, 'sql'));
+// DB jako jeden dvojklik: přibalený oficiální sqlite3.exe + launcher.
+fs.copyFileSync(
+  path.join(root, 'tools', 'win', 'sqlite3.exe'),
+  path.join(sendDir, 'sql', 'sqlite3.exe')
+);
+fs.writeFileSync(
+  path.join(sendDir, 'sql', 'spustit-sql.cmd'),
+  [
+    '@echo off',
+    'cd /d "%~dp0"',
+    'echo Books SQL - SQLite konzole nad books.db',
+    'echo Napis  .tables  pro seznam tabulek,  .quit  pro ukonceni.',
+    'echo.',
+    'sqlite3.exe -header -column books.db',
+    'pause'
+  ].join('\r\n')
+);
 fs.writeFileSync(
   path.join(sendDir, 'JAK-NASADIT.md'),
   [
@@ -145,9 +162,9 @@ fs.writeFileSync(
     '## 4. SQL část',
     '',
     'Databáze `sql\\books.db` je samostatná (není napojená na server).',
-    'Windows nemá SQLite v základu – kolega/uchazeč potřebuje vlastní',
-    'SQLite klienta (např. `sqlite3.exe`, DB Browser for SQLite apod.).',
-    'Záměrně nic nepřibalujeme.',
+    'Dvojklik na **`sql\\spustit-sql.cmd`** otevře SQLite konzoli nad',
+    '`books.db` (přibalený `sqlite3.exe`, nic se neinstaluje).',
+    'Ukázkové dotazy: `sqlite3.exe books.db < examples.sql`.',
     '',
     '## Přístupy',
     '',
