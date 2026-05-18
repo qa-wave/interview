@@ -19,4 +19,5 @@ Nejdřív spusť serverovou část. REST i SOAP běží na `http://localhost:401
 
 ## Zadání
 
-- Otevři `zadani.html` (kompletní zadání).
+- Otevři `zadani.html` (kompletní zadání, HTML).
+- Nebo `zadani.md` (stejné zadání v Markdownu).
