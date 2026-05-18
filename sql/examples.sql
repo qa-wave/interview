@@ -27,3 +27,13 @@ SELECT category, COUNT(*) AS pocet
 FROM books
 GROUP BY category
 HAVING pocet > 1;
+
+.print
+.print --- Zmena dat: oznac knihy v kategorii Testing jako nedostupne
+.print --- (v transakci s ROLLBACK, aby examples.sql zustal nedestruktivni)
+BEGIN;
+SELECT COUNT(*) AS testing_pred FROM books WHERE category = 'Testing' AND available = 1;
+UPDATE books SET available = 0 WHERE category = 'Testing';
+SELECT changes() AS zmeneno_radku;
+SELECT COUNT(*) AS testing_po FROM books WHERE category = 'Testing' AND available = 1;
+ROLLBACK;

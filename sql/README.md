@@ -23,5 +23,9 @@ sqlite3 -header -column books.db < examples.sql
 
 ## Kandidatske ulohy
 
-1. Vypis dostupne knihy v kategorii `Integration`.
-2. Spocitej pocet vypujcek podle statusu. Vystup pojmenuj `status`, `pocet`.
+1. Vypis dostupne knihy v kategorii `Integration` (sloupce `id`, `title`, `author`).
+2. Spocitej pocet vypujcek podle statusu. Vystup pojmenuj `status`, `pocet`,
+   serad sestupne podle `pocet`.
+3. Zmena dat: jednim `UPDATE` oznac vsechny knihy v kategorii `Testing` jako
+   nedostupne (`available = 0`). Pak `SELECT`em over, ze v kategorii `Testing`
+   uz neni zadna dostupna kniha, a urci, kolik radku `UPDATE` zmenil.

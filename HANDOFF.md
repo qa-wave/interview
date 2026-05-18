@@ -41,9 +41,9 @@ Pristupy:
 
 Client cast je v `client/`:
 
-- `client/sluzby.html` - odkazy a pristupove udaje
-- `client/zadani.html` - citelne zadani
-- `client/zadani.md` - markdown zadani
+- `client/zadani.html` - kompletni zadani (jen HTML): ulohy nahore,
+  pristupy, definice sluzeb, SQL vcetne zmeny dat, zaverecna diskuze
+- `client/sluzby.html` - jednoduchy rozcestnik (odkazy + pristupy)
 
 Tohle je cast, kterou ma videt uchazec.
 
