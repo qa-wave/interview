@@ -1,34 +1,34 @@
 # Books Mock
 
-Projekt je rozdeleny na tri casti:
+Projekt je rozdělený na tři části:
 
-| Cast | Ucel |
+| Část | Účel |
 |---|---|
-| `server/` | Mock sluzby, serverova dokumentace, start script a podklady pro instalator. |
-| `client/` | Materialy pro uchazece: odkazy, pristupove udaje a zadani. |
-| `sql/` | Samostatna SQLite cast s knihami a vypujckami. |
+| `server/` | Mock služby, serverová dokumentace, start script a podklady pro instalátor. |
+| `client/` | Materiály pro uchazeče: odkazy, přístupové údaje a zadání. |
+| `sql/` | Samostatná SQLite část s knihami a výpůjčkami. |
 
-## Spusteni serveru ze zdroju
+## Spuštění serveru ze zdrojů
 
 ```bash
 npm install
 npm start
 ```
 
-Po startu otevri:
+Po startu otevři:
 
 ```text
 http://localhost:4010/services
 ```
 
-## Sluzby
+## Služby
 
 - REST Swagger: `http://localhost:4010/swagger`
 - REST Books OpenAPI: `http://localhost:4010/openapi-books.yaml`
 - REST Loans OpenAPI: `http://localhost:4010/openapi-loans.yaml`
 - SOAP WSDL: `http://localhost:4010/soap?wsdl`
 
-## Pristupy
+## Přístupy
 
 ```text
 Authorization: Bearer BOOKS-REST-TOKEN-2026
@@ -44,10 +44,10 @@ cd sql
 sqlite3 -header -column books.db < examples.sql
 ```
 
-## Baleni
+## Balení
 
 ```bash
 npm run package
 ```
 
-Baleni vytvori vystupy v `dist/packages/`.
+Balení vytvoří výstupy v `dist/packages/`.

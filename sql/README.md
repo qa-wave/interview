@@ -1,19 +1,19 @@
-# SQL cast
+# SQL část
 
-SQLite databaze je samostatny dataset pro SQL cast testu. Neni napojena na
-bezici REST/SOAP mock.
+SQLite databáze je samostatný dataset pro SQL část testu. Není napojená na
+běžící REST/SOAP mock.
 
 ## Soubory
 
 | Soubor | Popis |
 |---|---|
-| `schema.sql` | Schéma knihoven, knih, vypujcek a udalosti. |
-| `seed.sql` | Deterministicka testovaci data. |
-| `books.db` | Hotova SQLite databaze. |
-| `examples.sql` | Ukazkove SQL dotazy. |
-| `build.sh` | Znovu postavi databazi. |
+| `schema.sql` | Schéma knihoven, knih, výpůjček a událostí. |
+| `seed.sql` | Deterministická testovací data. |
+| `books.db` | Hotová SQLite databáze. |
+| `examples.sql` | Ukázkové SQL dotazy. |
+| `build.sh` | Znovu postaví databázi. |
 
-## Rychly start
+## Rychlý start
 
 ```bash
 ./build.sh
@@ -21,11 +21,11 @@ sqlite3 -header -column books.db
 sqlite3 -header -column books.db < examples.sql
 ```
 
-## Kandidatske ulohy
+## Kandidátské úlohy
 
-1. Vypis dostupne knihy v kategorii `Integration` (sloupce `id`, `title`, `author`).
-2. Spocitej pocet vypujcek podle statusu. Vystup pojmenuj `status`, `pocet`,
-   serad sestupne podle `pocet`.
-3. Zmena dat: jednim `UPDATE` oznac vsechny knihy v kategorii `Testing` jako
-   nedostupne (`available = 0`). Pak `SELECT`em over, ze v kategorii `Testing`
-   uz neni zadna dostupna kniha, a urci, kolik radku `UPDATE` zmenil.
+1. Vypiš dostupné knihy v kategorii `Integration` (sloupce `id`, `title`, `author`).
+2. Spočítej počet výpůjček podle statusu. Výstup pojmenuj `status`, `pocet`,
+   seřaď sestupně podle `pocet`.
+3. Změna dat: jedním `UPDATE` označ všechny knihy v kategorii `Testing` jako
+   nedostupné (`available = 0`). Pak `SELECT`em ověř, že v kategorii `Testing`
+   už není žádná dostupná kniha, a urči, kolik řádků `UPDATE` změnil.

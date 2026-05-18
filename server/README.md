@@ -1,32 +1,32 @@
-# Serverova cast
+# Serverová část
 
-Tahle slozka je urcena pro provoz mock sluzeb.
+Tahle složka je určená pro provoz mock služeb.
 
 ## Co obsahuje
 
-- REST sluzby pro knihy a vypujcky.
-- SOAP sluzbu pro vypujcky.
+- REST služby pro knihy a výpůjčky.
+- SOAP službu pro výpůjčky.
 - OpenAPI dokumentaci.
-- WSDL dostupne po spusteni serveru.
+- WSDL dostupné po spuštění serveru.
 - Mock data.
-- SQL slozka zustava v rootu projektu jako samostatna cast testu.
+- SQL složka zůstává v rootu projektu jako samostatná část testu.
 
-## Spusteni
+## Spuštění
 
-Ze zdrojoveho projektu:
+Ze zdrojového projektu:
 
 ```bash
 npm start
 ```
 
-Po spusteni otevri:
+Po spuštění otevři:
 
 ```text
 http://localhost:4010/services
 ```
 
-## Windows balicek
+## Windows balíček
 
-Finalni Windows balicek ma vedle teto dokumentace obsahovat `books-mock.exe`
-a `start-windows.cmd`. Instalator vznikne z baliciho skriptu az na stroji,
-kde je dostupny `pkg`/NSIS a sit pro stazeni runtime binarek.
+Finální Windows balíček má vedle této dokumentace obsahovat `books-mock.exe`
+a `start-windows.cmd`. Instalátor vznikne z balicího skriptu až na stroji,
+kde je dostupný `pkg`/NSIS a síť pro stažení runtime binárek.

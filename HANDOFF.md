@@ -2,28 +2,28 @@
 
 ## Stav projektu
 
-Projekt `/Users/tm/workspaces/projects/interview` byl prekopany z puvodniho
-interview/candidate mocku na jednodussi domenu knih:
+Projekt `/Users/tm/workspaces/projects/interview` byl překopaný z původního
+interview/candidate mocku na jednodušší doménu knih:
 
-- `server/` je serverova cast.
-- `client/` je cast pro uchazece.
-- `sql/` je samostatna SQL cast.
+- `server/` je serverová část.
+- `client/` je část pro uchazeče.
+- `sql/` je samostatná SQL část.
 
-Stare veci jako `docs/`, `dashboard/`, `postman/`, `soapui/`, puvodni
-`mocks/`, `candidate/`, stare PDF a `sql/interview.db` byly smazane.
+Staré věci jako `docs/`, `dashboard/`, `postman/`, `soapui/`, původní
+`mocks/`, `candidate/`, staré PDF a `sql/interview.db` byly smazané.
 
 ## Server
 
-Hlavni server je `server/server.js` (presunuto z rootu kvuli ciste
-server/client separaci). `npm start` ho spousti transparentne.
+Hlavní server je `server/server.js` (přesunuto z rootu kvůli čisté
+server/client separaci). `npm start` ho spouští transparentně.
 
-Aktualni domena:
+Aktuální doména:
 
 - knihy: `/rest/books`
-- vypujcky: `/rest/loans`
-- SOAP vypujcky: `ListLoans`, `GetLoan`, `CreateLoan`, `UpdateLoanStatus`, `ReviewLoan`
+- výpůjčky: `/rest/loans`
+- SOAP výpůjčky: `ListLoans`, `GetLoan`, `CreateLoan`, `UpdateLoanStatus`, `ReviewLoan`
 
-Dokumentace sluzeb:
+Dokumentace služeb:
 
 - `http://localhost:4010/services`
 - `http://localhost:4010/swagger`
@@ -31,7 +31,7 @@ Dokumentace sluzeb:
 - `http://localhost:4010/openapi-loans.yaml`
 - `http://localhost:4010/soap?wsdl`
 
-Pristupy:
+Přístupy:
 
 - REST token: `BOOKS-REST-TOKEN-2026`
 - SOAP user: `books-user`
@@ -39,17 +39,17 @@ Pristupy:
 
 ## Client
 
-Client cast je v `client/`:
+Client část je v `client/`:
 
-- `client/zadani.html` - kompletni zadani (jen HTML): ulohy nahore,
-  pristupy, definice sluzeb, SQL vcetne zmeny dat, zaverecna diskuze
-- `client/sluzby.html` - jednoduchy rozcestnik (odkazy + pristupy)
+- `client/zadani.html` – kompletní zadání (jen HTML): úlohy nahoře,
+  přístupy, definice služeb, SQL včetně změny dat, závěrečná diskuze
+- `client/sluzby.html` – jednoduchý rozcestník (odkazy + přístupy)
 
-Tohle je cast, kterou ma videt uchazec.
+Tohle je část, kterou má vidět uchazeč.
 
 ## SQL
 
-SQL cast je v `sql/`:
+SQL část je v `sql/`:
 
 - `sql/schema.sql`
 - `sql/seed.sql`
@@ -57,7 +57,7 @@ SQL cast je v `sql/`:
 - `sql/books.db`
 - `sql/build.sh`
 
-Databaze je samostatna, neni napojena na REST/SOAP server.
+Databáze je samostatná, není napojená na REST/SOAP server.
 
 Rebuild:
 
@@ -72,21 +72,21 @@ Smoke test:
 sqlite3 -header -column sql/books.db < sql/examples.sql
 ```
 
-## Baleni
+## Balení
 
-`scripts/build-packages.js` ted vytvari:
+`scripts/build-packages.js` teď vytváří:
 
-- serverove balicky `books-mock-server-*`
-- klientsky balicek `books-mock-client.zip`
-- Windows installer, pokud je dostupny `makensis`
+- serverové balíčky `books-mock-server-*`
+- klientský balíček `books-mock-client.zip`
+- Windows installer, pokud je dostupný `makensis`
 
-Poznamka: V predchozi sandbox session `npm run package` nemohlo stahnout pkg
-runtime binarky kvuli zablokovane siti. V plne Codex session nebo lokalne s
-internetem by to melo dobehnout.
+Poznámka: V předchozí sandbox session `npm run package` nemohlo stáhnout pkg
+runtime binárky kvůli zablokované síti. V plné Codex session nebo lokálně s
+internetem by to mělo doběhnout.
 
-## Overeni provedene v sandboxu
+## Ověření provedené v sandboxu
 
-Proslo:
+Prošlo:
 
 ```bash
 node --check server/server.js
@@ -95,10 +95,10 @@ node --check scripts/build-packages.js
 sqlite3 -header -column sql/books.db < sql/examples.sql
 ```
 
-`npm test` v sandboxu neproslo, protoze sandbox neumoznil bindnout lokalni TCP
-port. To je limit prostredi, ne nutne chyba aplikace.
+`npm test` v sandboxu neprošlo, protože sandbox neumožnil bindnout lokální TCP
+port. To je limit prostředí, ne nutně chyba aplikace.
 
-## Dalsi krok v nove Codex session
+## Další krok v nové Codex session
 
-Spustit novou session s plnym pristupem, dobalit artefakty a pripadne je
-zkopirovat na Windows plochu nebo do sdilene slozky VM.
+Spustit novou session s plným přístupem, dobalit artefakty a případně je
+zkopírovat na Windows plochu nebo do sdílené složky VM.
