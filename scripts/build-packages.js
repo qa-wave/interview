@@ -112,23 +112,8 @@ for (const drop of ['server.js', 'reseni.md', 'start-windows.cmd', 'setup-window
 }
 copyDir(path.join(root, 'client'), path.join(sendDir, 'client'));
 copyDir(path.join(root, 'sql'), path.join(sendDir, 'sql'));
-// DB jako jeden dvojklik: přibalený oficiální sqlite3.exe + launcher.
-fs.copyFileSync(
-  path.join(root, 'tools', 'win', 'sqlite3.exe'),
-  path.join(sendDir, 'sql', 'sqlite3.exe')
-);
-fs.writeFileSync(
-  path.join(sendDir, 'sql', 'spustit-sql.cmd'),
-  [
-    '@echo off',
-    'cd /d "%~dp0"',
-    'echo Books SQL - SQLite konzole nad books.db',
-    'echo Napis  .tables  pro seznam tabulek,  .quit  pro ukonceni.',
-    'echo.',
-    'sqlite3.exe -header -column books.db',
-    'pause'
-  ].join('\r\n')
-);
+// DB se ovládá z prohlížeče přes samotný books-mock.exe (route /sql).
+// books.db musí ležet vedle exe v sql/ — copyDir výše to zajistil.
 fs.writeFileSync(
   path.join(sendDir, 'JAK-NASADIT.md'),
   [
@@ -144,7 +129,7 @@ fs.writeFileSync(
     '',
     '## 2. Spustit',
     '',
-    'Dvojklik na **`books-mock.exe`**. To je vše.',
+    'Dvojklik na **`books-mock.exe`**. To je vše — REST, SOAP i SQL.',
     '',
     '- server naběhne na `http://localhost:4010`',
     '- automaticky se otevře přehled služeb v prohlížeči',
@@ -161,10 +146,10 @@ fs.writeFileSync(
     '',
     '## 4. SQL část',
     '',
-    'Databáze `sql\\books.db` je samostatná (není napojená na server).',
-    'Dvojklik na **`sql\\spustit-sql.cmd`** otevře SQLite konzoli nad',
-    '`books.db` (přibalený `sqlite3.exe`, nic se neinstaluje).',
-    'Ukázkové dotazy: `sqlite3.exe books.db < examples.sql`.',
+    'Žádná instalace. V přehledu služeb je odkaz **SQL konzole**',
+    '(`http://localhost:4010/sql`) — píše se do ní rovnou v prohlížeči',
+    'a běží nad `sql\\books.db`. Soubor `sql\\books.db` musí zůstat',
+    'vedle `books-mock.exe`.',
     '',
     '## Přístupy',
     '',

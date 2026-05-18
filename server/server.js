@@ -20,8 +20,66 @@ const PUBLIC_PATHS = new Set([
   '/openapi.yaml',
   '/openapi-books.yaml',
   '/openapi-loans.yaml',
-  '/rest'
+  '/rest',
+  '/sql',
+  '/sql/run'
 ]);
+
+function resolveBooksDb() {
+  const candidates = [
+    process.env.BOOKS_DB,
+    path.join(path.dirname(process.execPath), 'sql', 'books.db'),
+    path.join(__dirname, '..', 'sql', 'books.db'),
+    path.join(process.cwd(), 'sql', 'books.db')
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch {
+      // ignore and try next
+    }
+  }
+  return null;
+}
+
+function sqlConsoleHtml() {
+  return `<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Books Mock - SQL</title>
+<style>body{font-family:Arial,sans-serif;margin:24px;background:#f6f7f9;color:#17202a}main{max-width:960px;margin:auto}
+h1{margin:0 0 4px}p.muted{color:#5b6675;font-size:14px;margin-top:0}
+textarea{width:100%;height:140px;font-family:Consolas,monospace;font-size:13px;padding:10px;border:1px solid #d9dee7;border-radius:6px;box-sizing:border-box}
+button{margin-top:10px;padding:8px 18px;font-size:14px;border:0;border-radius:6px;background:#1266f1;color:#fff;cursor:pointer}
+table{border-collapse:collapse;margin-top:16px;width:100%}th,td{border:1px solid #d9dee7;padding:6px 10px;text-align:left;font-size:13px}
+th{background:#f1f4f8}.err{color:#b00020;white-space:pre-wrap;font-family:Consolas,monospace;margin-top:16px}
+.ok{color:#0a7d33;margin-top:16px}a{color:#1266f1}</style></head>
+<body><main>
+<h1>SQL konzole &mdash; books.db</h1>
+<p class="muted">Samostatna databaze knih a vypujcek. Spousti se jeden prikaz. <a href="/services">zpet na sluzby</a></p>
+<textarea id="q" placeholder="SELECT * FROM books;">SELECT id, title, author, category, available FROM books;</textarea>
+<div><button onclick="run()">Spustit (Ctrl+Enter)</button></div>
+<div id="out"></div>
+<script>
+const ta=document.getElementById('q'),out=document.getElementById('out');
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')run();});
+async function run(){
+ out.innerHTML='...';
+ try{
+  const r=await fetch('/sql/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sql:ta.value})});
+  const d=await r.json();
+  if(!d.ok){out.innerHTML='<div class="err">'+(d.message||d.error)+'</div>';return;}
+  if(d.type==='rows'){
+   if(!d.rows.length){out.innerHTML='<div class="ok">0 radku.</div>';return;}
+   let h='<table><tr>'+d.columns.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
+   for(const row of d.rows){h+='<tr>'+d.columns.map(c=>'<td>'+(row[c]===null?'<i>null</i>':String(row[c]))+'</td>').join('')+'</tr>';}
+   out.innerHTML=h+'</table><div class="ok">'+d.rows.length+' radku.</div>';
+  } else {
+   out.innerHTML='<div class="ok">OK. Zmeneno radku: '+d.changes+(d.lastInsertRowid?(', lastInsertRowid: '+d.lastInsertRowid):'')+'</div>';
+  }
+ }catch(e){out.innerHTML='<div class="err">'+e+'</div>';}
+}
+</script></main></body></html>`;
+}
 
 function readConfig(options = {}) {
   const bearerToken = options.bearerToken || process.env.REST_BEARER_TOKEN || DEFAULT_BEARER_TOKEN;
@@ -265,6 +323,7 @@ function servicesHtml(config) {
 <body><main><h1>Books Mock - sluzby</h1><p>REST i SOAP bezi na stejnem serveru.</p>
 <div class="box"><h2>REST</h2><p><a href="/swagger">Swagger UI</a></p><p><a href="/openapi-books.yaml">Books OpenAPI</a></p><p><a href="/openapi-loans.yaml">Loans OpenAPI</a></p><p>Authorization: <code>Bearer ${config.bearerToken}</code></p></div>
 <div class="box"><h2>SOAP</h2><p><a href="/soap?wsdl">WSDL</a></p><p>Username: <code>${config.soapUser}</code><br>Password: <code>${config.soapPass}</code></p></div>
+<div class="box"><h2>SQL</h2><p><a href="/sql">SQL konzole nad books.db</a></p></div>
 <div class="box"><h2>Health</h2><p><a href="/health">/health</a></p></div></main></body></html>`;
 }
 
@@ -286,6 +345,41 @@ function createApp(options = {}) {
   app.get('/openapi.yaml', (_req, res) => res.type('text/yaml').send(fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8')));
   app.get('/openapi-books.yaml', (_req, res) => res.type('text/yaml').send(fs.readFileSync(path.join(__dirname, 'docs', 'openapi-books.yaml'), 'utf8')));
   app.get('/openapi-loans.yaml', (_req, res) => res.type('text/yaml').send(fs.readFileSync(path.join(__dirname, 'docs', 'openapi-loans.yaml'), 'utf8')));
+
+  app.get('/sql', (_req, res) => res.type('html').send(sqlConsoleHtml()));
+  app.post('/sql/run', (req, res) => {
+    const sql = (req.body && typeof req.body.sql === 'string' ? req.body.sql : '').trim();
+    if (!sql) return res.status(400).json({ ok: false, error: 'EMPTY_SQL', message: 'Zadej SQL prikaz.' });
+    let sqlite;
+    try {
+      sqlite = require('node:sqlite');
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: 'SQLITE_UNAVAILABLE', message: String(e.message || e) });
+    }
+    const dbPath = resolveBooksDb();
+    if (!dbPath) return res.status(500).json({ ok: false, error: 'DB_NOT_FOUND', message: 'sql/books.db nenalezen.' });
+    let db;
+    try {
+      db = new sqlite.DatabaseSync(dbPath);
+      const isQuery = /^\s*(select|with|pragma|explain)\b/i.test(sql);
+      if (isQuery) {
+        const rows = db.prepare(sql).all();
+        const columns = rows.length ? Object.keys(rows[0]) : [];
+        return res.json({ ok: true, type: 'rows', columns, rows });
+      }
+      const info = db.prepare(sql).run();
+      return res.json({
+        ok: true,
+        type: 'run',
+        changes: Number(info.changes),
+        lastInsertRowid: info.lastInsertRowid ? Number(info.lastInsertRowid) : 0
+      });
+    } catch (e) {
+      return res.status(400).json({ ok: false, error: 'SQL_ERROR', message: String(e.message || e) });
+    } finally {
+      try { if (db) db.close(); } catch { /* ignore */ }
+    }
+  });
 
   app.get('/rest', (req, res) => {
     const baseUrl = publicBaseUrl(req);
