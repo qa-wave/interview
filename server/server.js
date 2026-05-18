@@ -321,7 +321,7 @@ function servicesHtml(config) {
   return `<!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Books Mock - sluzby</title><style>body{font-family:Arial,sans-serif;margin:32px;background:#f6f7f9;color:#17202a}main{max-width:900px;margin:auto}.box{background:#fff;border:1px solid #d9dee7;border-radius:8px;padding:20px;margin:16px 0}a{color:#1266f1}code{font-family:Consolas,monospace}</style></head>
 <body><main><h1>Books Mock - sluzby</h1><p>REST i SOAP bezi na stejnem serveru.</p>
-<div class="box"><h2>REST</h2><p><a href="/swagger">Swagger UI</a></p><p><a href="/openapi-books.yaml">Books OpenAPI</a></p><p><a href="/openapi-loans.yaml">Loans OpenAPI</a></p><p>Authorization: <code>Bearer ${config.bearerToken}</code></p></div>
+<div class="box"><h2>REST</h2><p><a href="/swagger">Swagger UI</a> &mdash; interaktivni prohlizec REST API</p><p>Authorization: <code>Bearer ${config.bearerToken}</code></p><p style="color:#5b6675;font-size:13px">Raw OpenAPI pripadne na <a href="/openapi.yaml">/openapi.yaml</a></p></div>
 <div class="box"><h2>SOAP</h2><p><a href="/soap?wsdl">WSDL</a></p><p>Username: <code>${config.soapUser}</code><br>Password: <code>${config.soapPass}</code></p></div>
 <div class="box"><h2>SQL</h2><p><a href="/sql">SQL konzole nad books.db</a></p></div>
 <div class="box"><h2>Health</h2><p><a href="/health">/health</a></p></div></main></body></html>`;
