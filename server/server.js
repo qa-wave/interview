@@ -469,14 +469,26 @@ function createApp(options = {}) {
   return app;
 }
 
+function openBrowser(url) {
+  if (process.env.NO_OPEN === '1') return;
+  const { exec } = require('node:child_process');
+  const cmd =
+    process.platform === 'win32' ? `start "" "${url}"`
+    : process.platform === 'darwin' ? `open "${url}"`
+    : `xdg-open "${url}"`;
+  exec(cmd, () => {});
+}
+
 function start() {
   const port = Number(process.env.PORT || DEFAULT_PORT);
   const app = createApp();
   app.listen(port, () => {
-    console.log(`${SERVICE_NAME} listening on http://localhost:${port}`);
-    console.log(`Services: http://localhost:${port}/services`);
-    console.log(`Swagger: http://localhost:${port}/swagger`);
-    console.log(`SOAP WSDL: http://localhost:${port}/soap?wsdl`);
+    const base = `http://localhost:${port}`;
+    console.log(`${SERVICE_NAME} listening on ${base}`);
+    console.log(`Services: ${base}/services`);
+    console.log(`Swagger: ${base}/swagger`);
+    console.log(`SOAP WSDL: ${base}/soap?wsdl`);
+    openBrowser(`${base}/services`);
   });
 }
 

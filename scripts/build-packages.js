@@ -105,8 +105,9 @@ for (const item of serverPackages) {
 const sendDir = path.join(packageDir, 'books-mock-windows');
 fs.mkdirSync(sendDir, { recursive: true });
 copyDir(path.join(packageDir, 'books-mock-server-windows-x64'), sendDir);
-// Send bundle = runtime only. Vyhodíme zdroják a řešení (spoiler pro uchazeče).
-for (const drop of ['server.js', 'reseni.md']) {
+// Send bundle = jediný spustitelný soubor. Vyhodíme zdroják, řešení
+// (spoiler) a oba pomocné skripty — .exe si prohlížeč otevře sám.
+for (const drop of ['server.js', 'reseni.md', 'start-windows.cmd', 'setup-windows.bat']) {
   fs.rmSync(path.join(sendDir, drop), { force: true });
 }
 copyDir(path.join(root, 'client'), path.join(sendDir, 'client'));
@@ -124,14 +125,14 @@ fs.writeFileSync(
     'Rozbal celý ZIP do libovolné složky, např. `C:\\BooksMock\\`.',
     'Všechny soubory nech pohromadě (`books-mock.exe`, `client\\`, `sql\\` …).',
     '',
-    '## 2. Spustit server',
+    '## 2. Spustit',
     '',
-    'Dvojklik na **`start-windows.cmd`**.',
+    'Dvojklik na **`books-mock.exe`**. To je vše.',
     '',
-    '- server běží na `http://localhost:4010`',
-    '- automaticky se otevře přehled služeb `http://localhost:4010/services`',
+    '- server naběhne na `http://localhost:4010`',
+    '- automaticky se otevře přehled služeb v prohlížeči',
     '- okno konzole nech otevřené; zavřením se server vypne',
-    '- jiný port: před spuštěním `set PORT=4011`',
+    '- jiný port: spusť z příkazové řádky `set PORT=4011 && books-mock.exe`',
     '',
     'Pokud Windows SmartScreen varuje (nepodepsaná aplikace):',
     '„Více informací“ → „Přesto spustit“.',
@@ -141,12 +142,7 @@ fs.writeFileSync(
     'Otevři `client\\zadani.html` v prohlížeči (server musí běžet kvůli',
     'odkazům na Swagger a WSDL). Rozcestník je `client\\sluzby.html`.',
     '',
-    '## 4. (Volitelné) Zkratky na plochu',
-    '',
-    'Dvojklik na `setup-windows.bat` vytvoří na ploše zkratky na server,',
-    'přehled služeb, klienta a SQL složku.',
-    '',
-    '## 5. SQL část',
+    '## 4. SQL část',
     '',
     'Databáze `sql\\books.db` je samostatná (není napojená na server).',
     'Windows nemá SQLite v základu – kolega/uchazeč potřebuje vlastní',
