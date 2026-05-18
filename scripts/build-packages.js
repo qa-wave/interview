@@ -100,6 +100,70 @@ for (const item of serverPackages) {
   createArchive(targetDir, path.join(packageDir, `${item.name}.zip`));
 }
 
+// Combined "ready to send" Windows bundle: server + client + sql + návod
+// v jedné složce, aby kolega rozbalil jeden zip a dvojklikem spustil.
+const sendDir = path.join(packageDir, 'books-mock-windows');
+fs.mkdirSync(sendDir, { recursive: true });
+copyDir(path.join(packageDir, 'books-mock-server-windows-x64'), sendDir);
+// Send bundle = runtime only. Vyhodíme zdroják a řešení (spoiler pro uchazeče).
+for (const drop of ['server.js', 'reseni.md']) {
+  fs.rmSync(path.join(sendDir, drop), { force: true });
+}
+copyDir(path.join(root, 'client'), path.join(sendDir, 'client'));
+copyDir(path.join(root, 'sql'), path.join(sendDir, 'sql'));
+fs.writeFileSync(
+  path.join(sendDir, 'JAK-NASADIT.md'),
+  [
+    '# Books Mock – nasazení na Windows',
+    '',
+    'Samostatná aplikace. Nepotřebuje Node.js ani instalaci.',
+    'Stačí Windows 10/11 (64-bit).',
+    '',
+    '## 1. Rozbalit',
+    '',
+    'Rozbal celý ZIP do libovolné složky, např. `C:\\BooksMock\\`.',
+    'Všechny soubory nech pohromadě (`books-mock.exe`, `client\\`, `sql\\` …).',
+    '',
+    '## 2. Spustit server',
+    '',
+    'Dvojklik na **`start-windows.cmd`**.',
+    '',
+    '- server běží na `http://localhost:4010`',
+    '- automaticky se otevře přehled služeb `http://localhost:4010/services`',
+    '- okno konzole nech otevřené; zavřením se server vypne',
+    '- jiný port: před spuštěním `set PORT=4011`',
+    '',
+    'Pokud Windows SmartScreen varuje (nepodepsaná aplikace):',
+    '„Více informací“ → „Přesto spustit“.',
+    '',
+    '## 3. Zadání pro uchazeče',
+    '',
+    'Otevři `client\\zadani.html` v prohlížeči (server musí běžet kvůli',
+    'odkazům na Swagger a WSDL). Rozcestník je `client\\sluzby.html`.',
+    '',
+    '## 4. (Volitelné) Zkratky na plochu',
+    '',
+    'Dvojklik na `setup-windows.bat` vytvoří na ploše zkratky na server,',
+    'přehled služeb, klienta a SQL složku.',
+    '',
+    '## 5. SQL část',
+    '',
+    'Databáze `sql\\books.db` je samostatná (není napojená na server).',
+    'Windows nemá SQLite v základu – kolega/uchazeč potřebuje vlastní',
+    'SQLite klienta (např. `sqlite3.exe`, DB Browser for SQLite apod.).',
+    'Záměrně nic nepřibalujeme.',
+    '',
+    '## Přístupy',
+    '',
+    '```',
+    'REST:  Authorization: Bearer BOOKS-REST-TOKEN-2026',
+    'SOAP:  username books-user / password Books!2026',
+    '```',
+    ''
+  ].join('\r\n')
+);
+createArchive(sendDir, path.join(packageDir, 'books-mock-windows.zip'));
+
 console.log(`Packages created in ${packageDir}`);
 
 try {
