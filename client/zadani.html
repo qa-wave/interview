@@ -28,7 +28,7 @@
   <section>
     <h2>Zadani</h2>
     <ol>
-      <li>Projdi si <strong>definice sluzeb</strong> (Swagger, Books/Loans OpenAPI, SOAP WSDL) v sekci nize a zorientuj se v REST a SOAP rozhrani.</li>
+      <li>Projdi si <strong>definice sluzeb</strong> (Swagger UI pro REST, WSDL pro SOAP) v sekci nize a zorientuj se v obou rozhranich.</li>
       <li>Najdi knihu podle ISBN <code>978-80-000-0002-8</code> pres REST a uloz si <code>bookId</code> z odpovedi.</li>
       <li>Vytvor vypujcku pres <code>POST /rest/loans</code> pro tuto knihu, <code>borrowerName</code> = <code>QA Candidate</code>. Uloz si <code>loanId</code> a zmen status na <code>BORROWED</code> pres <code>PATCH /rest/loans/{id}/status</code>. Vyzkousej jeden negativni scenar (neexistujici kniha, nedostupna kniha, nebo neplatny status).</li>
       <li>Pres SOAP operaci <code>GetLoan</code> (s WS-Security) over, ze stejna vypujcka ma status <code>BORROWED</code>. Pote ji ohodnot ratingem <code>5</code> a <strong>druhym protokolem</strong> over, ze <code>status = RETURNED</code> a <code>recommendation = RECOMMENDED</code>.</li>
