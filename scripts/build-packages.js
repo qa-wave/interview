@@ -80,7 +80,7 @@ const serverPackages = [
     sourceBinary: 'books-mock-win-x64.exe',
     targetBinary: 'books-mock.exe',
     startScript: 'start-windows.cmd',
-    startContents: '@echo off\r\nset DIR=%~dp0\r\nif "%PORT%"=="" set PORT=4010\r\nif "%MOCK_DATA_PATH%"=="" set MOCK_DATA_PATH=%DIR%mocks\\books.mock.json\r\nstart "" "http://localhost:4010/services"\r\n"%DIR%books-mock.exe" %*\r\n'
+    startContents: '@echo off\r\nset DIR=%~dp0\r\nif "%PORT%"=="" set PORT=4010\r\nif "%MOCK_DATA_PATH%"=="" set MOCK_DATA_PATH=%DIR%mocks\\books.mock.json\r\nstart "" "http://localhost:4010/zadani"\r\n"%DIR%books-mock.exe" %*\r\n'
   }
 ];
 
@@ -132,7 +132,7 @@ fs.writeFileSync(
     'Dvojklik na **`books-mock.exe`**. To je vše — REST, SOAP i SQL.',
     '',
     '- server naběhne na `http://localhost:4010`',
-    '- automaticky se otevře přehled služeb v prohlížeči',
+    '- automaticky se otevře zadání se SQL editorem v prohlížeči',
     '- okno konzole nech otevřené; zavřením se server vypne',
     '- jiný port: spusť z příkazové řádky `set PORT=4011 && books-mock.exe`',
     '',
@@ -141,15 +141,14 @@ fs.writeFileSync(
     '',
     '## 3. Zadání pro uchazeče',
     '',
-    'Otevři `client\\zadani.html` v prohlížeči (server musí běžet kvůli',
-    'odkazům na Swagger a WSDL). Rozcestník je `client\\sluzby.html`.',
+    'Po spuštění se automaticky otevře `http://localhost:4010/zadani`',
+    'se zadáním a vestavěným SQL editorem. Offline kopie je v `client\\zadani.html`.',
     '',
     '## 4. SQL část',
     '',
-    'Žádná instalace. V přehledu služeb je odkaz **SQL konzole**',
-    '(`http://localhost:4010/sql`) — píše se do ní rovnou v prohlížeči',
-    'a běží nad `sql\\books.db`. Soubor `sql\\books.db` musí zůstat',
-    'vedle `books-mock.exe`.',
+    'SQL editor je přímo v zadání (`/zadani`). Samostatná SQL konzole',
+    'je na `http://localhost:4010/sql`. Obojí běží nad `sql\\books.db`.',
+    'Soubor `sql\\books.db` musí zůstat vedle `books-mock.exe`.',
     '',
     '## Přístupy',
     '',

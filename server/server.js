@@ -16,6 +16,7 @@ const PUBLIC_PATHS = new Set([
   '/',
   '/health',
   '/services',
+  '/zadani',
   '/swagger',
   '/openapi.yaml',
   '/openapi-books.yaml',
@@ -55,7 +56,7 @@ th{background:#f1f4f8}.err{color:#b00020;white-space:pre-wrap;font-family:Consol
 .ok{color:#0a7d33;margin-top:16px}a{color:#1266f1}</style></head>
 <body><main>
 <h1>SQL konzole &mdash; books.db</h1>
-<p class="muted">Samostatna databaze knih a vypujcek. Spousti se jeden prikaz. <a href="/services">zpet na sluzby</a></p>
+<p class="muted">Samostatna databaze knih a vypujcek. Spousti se jeden prikaz. <a href="/zadani">zpet na zadani</a> | <a href="/services">sluzby</a></p>
 <textarea id="q" placeholder="SELECT * FROM books;">SELECT id, title, author, category, available FROM books;</textarea>
 <div><button onclick="run()">Spustit (Ctrl+Enter)</button></div>
 <div id="out"></div>
@@ -79,6 +80,124 @@ async function run(){
  }catch(e){out.innerHTML='<div class="err">'+e+'</div>';}
 }
 </script></main></body></html>`;
+}
+
+function zadaniHtml() {
+  return `<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prakticky test - Books Mock</title>
+  <style>
+    body { margin: 32px; font-family: Arial, sans-serif; line-height: 1.5; color: #17202a; background: #f6f7f9; }
+    main { max-width: 920px; margin: 0 auto; }
+    section { padding: 20px; margin: 16px 0; border: 1px solid #d9dee7; border-radius: 8px; background: #fff; }
+    h1 { margin-bottom: 4px; }
+    h2 { margin-top: 0; }
+    code, pre { font-family: Consolas, "Courier New", monospace; }
+    pre { padding: 12px; overflow: auto; background: #f1f4f8; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #d9dee7; text-align: left; vertical-align: top; }
+    th { background: #f1f4f8; }
+    ol li { margin: 8px 0; }
+    a { color: #1266f1; }
+    .muted { color: #5b6675; font-size: 14px; }
+    textarea.sql-editor { width: 100%; height: 120px; font-family: Consolas, monospace; font-size: 13px; padding: 10px; border: 1px solid #d9dee7; border-radius: 6px; box-sizing: border-box; resize: vertical; }
+    button.sql-run { margin-top: 8px; padding: 8px 18px; font-size: 14px; border: 0; border-radius: 6px; background: #1266f1; color: #fff; cursor: pointer; }
+    button.sql-run:hover { background: #0d4fbf; }
+    .sql-result table { margin-top: 12px; }
+    .sql-result .err { color: #b00020; white-space: pre-wrap; font-family: Consolas, monospace; margin-top: 12px; }
+    .sql-result .ok { color: #0a7d33; margin-top: 12px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Prakticky test: integracni tester</h1>
+  <p class="muted">Casovy limit prakticke casti je 60 minut. Server bezi na <code>http://localhost:4010</code>.</p>
+
+  <section>
+    <h2>Zadani</h2>
+    <ol>
+      <li>Projdi si <strong>definice sluzeb</strong> (Swagger UI pro REST, WSDL pro SOAP) v sekci nize a zorientuj se v obou rozhranich.</li>
+      <li>Najdi knihu podle ISBN <code>978-80-000-0002-8</code> pres REST a uloz si <code>bookId</code> z odpovedi.</li>
+      <li>Vytvor vypujcku pres <code>POST /rest/loans</code> pro tuto knihu, <code>borrowerName</code> = <code>QA Candidate</code>. Uloz si <code>loanId</code> a zmen status na <code>BORROWED</code> pres <code>PATCH /rest/loans/{id}/status</code>. Vyzkousej jeden negativni scenar (neexistujici kniha, nedostupna kniha, nebo neplatny status).</li>
+      <li>Pres SOAP operaci <code>GetLoan</code> (s WS-Security) over, ze stejna vypujcka ma status <code>BORROWED</code>. Pote ji ohodnot ratingem <code>5</code> a <strong>druhym protokolem</strong> over, ze <code>status = RETURNED</code> a <code>recommendation = RECOMMENDED</code>.</li>
+      <li>Splnit SQL cast nize (vcetne zmeny dat).</li>
+      <li>Pripravit si zaverecnou diskuzi (sekce uplne dole).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Pristupy</h2>
+    <table>
+      <tr><th>REST</th><td><code>Authorization: Bearer BOOKS-REST-TOKEN-2026</code></td></tr>
+      <tr><th>SOAP username</th><td><code>books-user</code></td></tr>
+      <tr><th>SOAP password</th><td><code>Books!2026</code></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Definice sluzeb</h2>
+    <table>
+      <tr><th>REST &mdash; Swagger UI</th><td><a href="/swagger" target="_blank">/swagger</a></td></tr>
+      <tr><th>SOAP &mdash; WSDL</th><td><a href="/soap?wsdl" target="_blank">/soap?wsdl</a></td></tr>
+    </table>
+    <p class="muted">Swagger UI je interaktivni prohlizec REST API (knihy <code>/rest/books</code>, vypujcky <code>/rest/loans</code>) &mdash; jde z nej i posilat requesty. WSDL je kontrakt SOAP sluzby nad vypujckami: operace <code>ListLoans</code>, <code>GetLoan</code>, <code>CreateLoan</code>, <code>UpdateLoanStatus</code>, <code>ReviewLoan</code>.</p>
+  </section>
+
+  <section>
+    <h2>SQL</h2>
+    <p>SQLite databaze <code>books.db</code> je samostatny dataset, neni napojena na bezici REST/SOAP mock.</p>
+    <p>Napis a spust dotazy:</p>
+    <ol>
+      <li><strong>Vypis</strong> dostupne knihy v kategorii <code>Integration</code> (sloupce <code>id</code>, <code>title</code>, <code>author</code>).</li>
+      <li><strong>Spocitej</strong> pocet vypujcek podle statusu, vystup pojmenuj <code>status</code> a <code>pocet</code>, serad sestupne podle <code>pocet</code>.</li>
+      <li><strong>Zmen data:</strong> oznac vsechny knihy v kategorii <code>Testing</code> jako nedostupne
+        (<code>available = 0</code>) jednim <code>UPDATE</code> dotazem. Pak <code>SELECT</code>em over,
+        ze v kategorii <code>Testing</code> uz neni zadna dostupna kniha. Kolik radku <code>UPDATE</code> zmenil?</li>
+    </ol>
+    <p class="muted">Cil: <code>SELECT</code>, <code>WHERE</code>, <code>GROUP BY</code>, <code>COUNT</code> a <code>UPDATE</code> vcetne overeni dopadu zmeny.</p>
+
+    <h3>SQL editor</h3>
+    <textarea class="sql-editor" id="q" placeholder="SELECT * FROM books;">SELECT id, title, author, category, available FROM books;</textarea>
+    <div><button class="sql-run" onclick="runSql()">Spustit (Ctrl+Enter)</button></div>
+    <div class="sql-result" id="out"></div>
+  </section>
+
+  <section>
+    <h2>Zaverecna diskuze</h2>
+    <p>Strucne popis:</p>
+    <ol>
+      <li>Co jsi overil/a v REST casti a co v SOAP casti.</li>
+      <li>Jak se lisi <strong>Bearer token</strong> a <strong>WS-Security UsernameToken</strong>.</li>
+      <li>Jak jsi v SQL overil/a, ze zmena dat (<code>UPDATE</code>) mela spravny dopad.</li>
+      <li>Co bys z tohoto flow automatizoval/a a jak.</li>
+    </ol>
+  </section>
+</main>
+<script>
+const ta=document.getElementById('q'),out=document.getElementById('out');
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')runSql();});
+async function runSql(){
+ out.innerHTML='...';
+ try{
+  const r=await fetch('/sql/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sql:ta.value})});
+  const d=await r.json();
+  if(!d.ok){out.innerHTML='<div class="err">'+(d.message||d.error)+'</div>';return;}
+  if(d.type==='rows'){
+   if(!d.rows.length){out.innerHTML='<div class="ok">0 radku.</div>';return;}
+   let h='<table><tr>'+d.columns.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
+   for(const row of d.rows){h+='<tr>'+d.columns.map(c=>'<td>'+(row[c]===null?'<i>null</i>':String(row[c]))+'</td>').join('')+'</tr>';}
+   out.innerHTML=h+'</table><div class="ok">'+d.rows.length+' radku.</div>';
+  } else {
+   out.innerHTML='<div class="ok">OK. Zmeneno radku: '+d.changes+(d.lastInsertRowid?(', lastInsertRowid: '+d.lastInsertRowid):'')+'</div>';
+  }
+ }catch(e){out.innerHTML='<div class="err">'+e+'</div>';}
+}
+</script>
+</body>
+</html>`;
 }
 
 function readConfig(options = {}) {
@@ -320,7 +439,7 @@ function swaggerHtml(baseUrl) {
 function servicesHtml(config) {
   return `<!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Books Mock - sluzby</title><style>body{font-family:Arial,sans-serif;margin:32px;background:#f6f7f9;color:#17202a}main{max-width:900px;margin:auto}.box{background:#fff;border:1px solid #d9dee7;border-radius:8px;padding:20px;margin:16px 0}a{color:#1266f1}code{font-family:Consolas,monospace}</style></head>
-<body><main><h1>Books Mock - sluzby</h1><p>REST i SOAP bezi na stejnem serveru.</p>
+<body><main><h1>Books Mock - sluzby</h1><p>REST i SOAP bezi na stejnem serveru. <a href="/zadani">Zadani pro kandidata</a></p>
 <div class="box"><h2>REST</h2><p><a href="/swagger">Swagger UI</a> &mdash; interaktivni prohlizec REST API</p><p>Authorization: <code>Bearer ${config.bearerToken}</code></p><p style="color:#5b6675;font-size:13px">Raw OpenAPI pripadne na <a href="/openapi.yaml">/openapi.yaml</a></p></div>
 <div class="box"><h2>SOAP</h2><p><a href="/soap?wsdl">WSDL</a></p><p>Username: <code>${config.soapUser}</code><br>Password: <code>${config.soapPass}</code></p></div>
 <div class="box"><h2>SQL</h2><p><a href="/sql">SQL konzole nad books.db</a></p></div>
@@ -338,7 +457,8 @@ function createApp(options = {}) {
   app.use(express.text({ type: ['application/xml', 'text/xml', '*/xml'], limit: '1mb' }));
   app.use(requireBearerAuth(config));
 
-  app.get('/', (_req, res) => res.redirect('/services'));
+  app.get('/', (_req, res) => res.redirect('/zadani'));
+  app.get('/zadani', (_req, res) => res.type('html').send(zadaniHtml()));
   app.get('/services', (_req, res) => res.type('html').send(servicesHtml(config)));
   app.get('/swagger', (req, res) => res.type('html').send(swaggerHtml(publicBaseUrl(req))));
   app.get('/health', (_req, res) => res.json({ status: 'ok', service: SERVICE_NAME, data: { books: state.books.length, loans: state.loans.length } }));
@@ -563,15 +683,25 @@ function createApp(options = {}) {
   return app;
 }
 
+function openBrowser(url) {
+  if (process.env.NO_OPEN) return;
+  const { exec } = require('node:child_process');
+  const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start ""' : 'xdg-open';
+  exec(`${cmd} "${url}"`);
+}
+
 function start() {
   const port = Number(process.env.PORT || DEFAULT_PORT);
   const app = createApp();
   app.listen(port, () => {
     const base = `http://localhost:${port}`;
     console.log(`${SERVICE_NAME} listening on ${base}`);
+    console.log(`Zadani:   ${base}/zadani`);
     console.log(`Services: ${base}/services`);
-    console.log(`Swagger: ${base}/swagger`);
+    console.log(`Swagger:  ${base}/swagger`);
     console.log(`SOAP WSDL: ${base}/soap?wsdl`);
+    console.log(`SQL:      ${base}/sql`);
+    openBrowser(`${base}/zadani`);
   });
 }
 
